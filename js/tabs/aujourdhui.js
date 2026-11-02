@@ -97,7 +97,7 @@ function renderToday() {
 view('aujourdhui', {
   label: 'Aujourd’hui',
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><rect x="11" y="12.5" width="4" height="4" rx=".6" fill="currentColor" stroke="none"/></svg>',
-  shell: () => `<div class="v-head"><h1><span class="hl">Aujourd’hui</span></h1><p class="v-sub" id="v-sub"></p></div>
+  shell: () => `<div class="v-head"><h1><span class="hl">Regia</span></h1><p class="v-sub" id="v-sub"></p></div>
     <form class="qa" id="qa-form" autocomplete="off"><label class="sr-only" for="qa-titre">Nouvelle tâche</label><input id="qa-titre" placeholder="Nouvelle tâche…"><label class="sr-only" for="qa-dom">Domaine</label><select id="qa-dom"></select><label class="sr-only" for="qa-date">Échéance</label><input id="qa-date" type="date"><button class="btn btn-primary" type="submit">Ajouter</button></form>
     <div id="v-short"></div><div id="v-tiles"></div><div id="v-strip"></div><div id="v-today"></div>`,
   render() {
