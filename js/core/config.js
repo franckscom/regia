@@ -19,7 +19,7 @@ export const TACHE_DEFAUT = { statut: 'a_faire', priorite: 'normale', echeance: 
 export const DOMAINE_CANDID = 'candid';
 
 /* Catégories partagées (réunions, notes) : clé, libellé, couleur */
-export const CATEGORIES = [['takeoff', 'TakeOff!', 'framboise'], ['m2', 'M2', 'encre'], ['stage', 'Stage', 'sapin'], ['franckscom', 'Franckscom', 'prune'], ['demarches', 'Démarches', 'ocre'], ['party', 'Party', 'orange']];
+export const CATEGORIES = [['takeoff', 'TakeOff!', 'framboise'], ['m2', 'M2', 'encre'], ['stage', 'Stage', 'sapin'], ['franckscom', 'Franckscom', 'prune'], ['demarches', 'Démarches', 'ocre'], ['party', 'Party', 'orange'], ['culture', 'Culture G', 'lagon']];
 export function catInfo(k) { const c = CATEGORIES.find(x => x[0] === k); return c ? { id: c[0], nom: c[1], c: color(c[2]) } : null; }
 
 /* Réunions */
@@ -36,8 +36,8 @@ export const LIENS_DEFAUT = [
 ];
 
 /* Notes */
-export const TRI_ACTIONS = [['tache', 'Tâche'], ['evenement', 'Événement'], ['contenu', 'Contenu'], ['note', 'Note'], ['idee', 'Idée'], ['veille', 'Veille']];
-export const NOTE_TYPES = [['note', 'Note'], ['idee', 'Idée'], ['veille', 'Veille']];
+export const TRI_ACTIONS = [['tache', 'Tâche'], ['evenement', 'Événement'], ['contenu', 'Contenu'], ['note', 'Note'], ['idee', 'Idée'], ['veille', 'Veille'], ['recherche', 'Recherche']];
+export const NOTE_TYPES = [['note', 'Note'], ['idee', 'Idée'], ['veille', 'Veille'], ['recherche', 'Recherche']];
 export const IDEE_GENRES = [['service', 'Idée de service'], ['concept', 'Concept'], ['reflexion', 'Réflexion']];
 export const VEILLE_GENRES = [['personne', 'Personne'], ['organisation', 'Organisation'], ['site', 'Site web'], ['app', 'App ou outil'], ['autre', 'Autre']];
 export const VEILLE_SUIVI = [['a_approfondir', 'À approfondir'], ['approfondi', 'Approfondi'], ['suivi', 'Suivi sur LinkedIn']];

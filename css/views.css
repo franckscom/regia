@@ -194,6 +194,7 @@ a.evrow:hover .evn{text-decoration:underline}
 .ntag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;line-height:1.5;padding:1px 6px;margin-top:2px;border:1px solid var(--line);border-radius:3px;color:var(--ink-2);white-space:nowrap}
 .ntag-idee{border-color:var(--d-prune);color:var(--d-prune)}
 .ntag-veille{border-color:var(--d-lagon);color:var(--d-lagon)}
+.ntag-recherche{border-color:var(--d-ocre);color:var(--d-ocre)}
 .ntag-done{border-style:dashed}
 
 /* Contenus */

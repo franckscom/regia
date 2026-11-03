@@ -70,7 +70,7 @@ function renderNotes() {
   const sub = $('#nt-sub'); if (sub) sub.textContent = `${inbox.length} à trier · ${all.filter(n => n.statut === 'rangee').length} dans le carnet`;
   const tb = $('#nt-tools');
   if (tb) tb.innerHTML = seg('notes-mode', [['trier', `À trier <span class="cnt">${inbox.length}</span>`], ['carnet', 'Carnet']], mode, 'Affichage')
-    + (mode === 'carnet' ? seg('carnet-type', [['tous', 'Tous'], ['note', 'Notes'], ['idee', 'Idées'], ['veille', 'Veille'], ['traitee', 'Transformées']], S.ui.carnetType || 'tous', 'Type') + `<input id="nt-search" type="search" placeholder="Rechercher dans le carnet…" aria-label="Rechercher une note" value="${esc(S.nq)}">` : '');
+    + (mode === 'carnet' ? seg('carnet-type', [['tous', 'Tous'], ['note', 'Notes'], ['idee', 'Idées'], ['veille', 'Veille'], ['recherche', 'Recherche'], ['traitee', 'Transformées']], S.ui.carnetType || 'tous', 'Type') + `<input id="nt-search" type="search" placeholder="Rechercher dans le carnet…" aria-label="Rechercher une note" value="${esc(S.nq)}">` : '');
   if (mode === 'trier') {
     el.innerHTML = inbox.length ? `<div class="ncards">${inbox.map(noteCard).join('')}</div>`
       : empty('Rien à trier.', 'Dicte une note à Claude dans n’importe quelle conversation : « Note : … ». Elle arrive ici à la prochaine synchro.');

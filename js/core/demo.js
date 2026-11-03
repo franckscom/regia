@@ -29,6 +29,8 @@ function donnees() {
   T('d-facture', { titre: 'Envoyer l’attestation à la mutuelle', domaine: 'admin', echeance: D(-2), notes: 'Formulaire en ligne, rubrique « Mes démarches ».' });
   T('d-courses', { titre: 'Faire le ménage', domaine: 'perso', echeance: D(2), recurrence: 'hebdo', notes: 'De préférence le matin.' });
   T('d-kpi', { titre: 'Relevé mensuel des statistiques de la page', domaine: 'asso', echeance: D(5), recurrence: 'mensuel' });
+  T('d-demain', { titre: 'Appeler la cave Valmont pour fixer le rendez-vous', domaine: 'franckscom', echeance: D(1) });
+  T('d-demain2', { titre: 'Imprimer le dossier de candidature', domaine: 'candid', echeance: D(1) });
   T('d-site', { titre: 'Landing page : rédiger la section « Méthode »', domaine: 'franckscom', echeance: D(3) });
   T('d-mentions', { titre: 'Landing page : mentions légales', domaine: 'franckscom', aConfirmer: true });
   T('d-substack', { titre: 'Article Substack n° 2', domaine: 'franckscom', echeance: D(9), notes: 'Un article toutes les deux semaines, le même jour.' });
@@ -52,6 +54,8 @@ function donnees() {
   add('notes', 'n-d4', { titre: 'Musée imaginaire de Toulouse', resume: 'Organisation à suivre sur LinkedIn : publie souvent sur la médiation.', texte: '', liens: 'https://example.com', categories: [], statut: 'rangee', type: 'veille', genre: 'organisation', suivi: 'a_approfondir', lien: 'https://example.com', source: 'app', creeLe: D(-6) + 'T12:00' });
   add('notes', 'n-d5', { titre: 'Le récit avant la langue', resume: 'À l’export, le problème est souvent le récit de marque, pas la traduction.', texte: '', liens: '', categories: ['franckscom'], statut: 'rangee', type: 'idee', genre: 'reflexion', source: 'app', creeLe: D(-8) + 'T21:00' });
 
+  add('notes', 'n-d6', { titre: 'Bourdieu, La Distinction (1979)', resume: 'Le capital culturel explique pourquoi la visite de musée paraît naturelle aux uns et intimidante aux autres.', texte: '', liens: '', categories: ['culture'], statut: 'rangee', type: 'note', source: 'app', creeLe: D(-4) + 'T20:00' });
+  add('notes', 'n-d7', { titre: 'Chiffres de l’export des PME en Occitanie', resume: 'Chercher la part des PME exportatrices et les secteurs les plus actifs.', texte: '', liens: '', categories: ['franckscom'], statut: 'rangee', type: 'recherche', source: 'app', creeLe: D(-2) + 'T10:00' });
   /* Réunions */
   add('reunions', 'r-d1', { titre: 'Point d’étape projet de groupe', date: D(-3), heure: '14:00', type: 'visio', lieu: '', avec: 'Équipe projet', categories: ['m2'], compteRendu: 'RÉSUMÉ\nLe plan est validé. Chacun prend une partie.\n\nACTIONS\n• Moi : rédiger la partie stratégie\n• Équipe : relecture croisée la semaine prochaine', liens: '', creeLe: D(-3), modifieLe: D(-3) });
   add('reunions', 'r-d2', { titre: 'Rencontre avec la cave Valmont', date: D(4), heure: '10:30', type: 'presentiel', lieu: 'Domaine Valmont', avec: 'Gérante de la cave', categories: ['franckscom'], compteRendu: '', liens: '', creeLe: D(-1), modifieLe: D(-1) });
