@@ -5,6 +5,8 @@ import { $, esc, toast, ICON } from './core/util.js';
 import { ymd, fShort, isoWeek } from './core/dates.js';
 import { VIEWS, ACTIONS, INPUTS, CHANGES, SUBMITS, hooks, ui, sheet, head, openSheet, closeSheet, onSheetField, masques } from './core/ui.js';
 import { renderSync, agendaCache } from './core/sync.js';
+import { DEMO } from './core/config.js';
+import { demoReset, demoSeed } from './core/demo.js';
 import { stepAdd } from './tabs/taches.js';
 import './tabs/aujourdhui.js';
 import './tabs/notes.js';
@@ -45,7 +47,7 @@ const COMPTE_AGENDA = 'franckscom360@gmail.com';
 function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 export function gcalUrl(d) {
   const p = (d || S.today).split('-'), a = agendaCache();
-  return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}?authuser=${encodeURIComponent((a && a.agenda) || COMPTE_AGENDA)}`;
+  return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}${DEMO ? '' : '?authuser=' + encodeURIComponent((a && a.agenda) || COMPTE_AGENDA)}`;
 }
 sheet('cal', {
   render() {
@@ -138,7 +140,7 @@ ACTIONS.set('update-app', () => { if (S.swReg && S.swReg.waiting) S.swReg.waitin
 async function start() {
   mountView(currentView());
   registerSW();
-  try { S.db = await LocalDB.open(); }
+  try { if (DEMO) await demoReset(); S.db = await LocalDB.open(); if (DEMO) await demoSeed(); }
   catch (e) { console.warn(e); S.db = null; S.status = 'off'; refresh(); toast('Stockage local indisponible sur cet appareil.', 'err'); return; }
   S.status = 'ok';
   rebuild(Object.keys(S.data));

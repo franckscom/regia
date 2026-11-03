@@ -3,7 +3,7 @@ import { S, list, get, put, patch, remove, saveUI, guarded } from '../core/store
 import { $, esc, clone, opts, newId, toast, ICON, linksHTML, textLinks } from '../core/util.js';
 import { isDate, addDays, addMonths, diff, fShort } from '../core/dates.js';
 import { STATUTS, PRIORITES, RECURRENCES, TACHE_DEFAUT, color } from '../core/config.js';
-import { view, action, onInput, sheet, openSheet, renderSheet, ui, head, foot, gate, empty, liens, refresh } from '../core/ui.js';
+import { view, action, onInput, sheet, openSheet, renderSheet, ui, head, foot, gate, empty, liens, refresh, onChange } from '../core/ui.js';
 
 /* ---- Données ---- */
 export function tasks() { return list('taches'); }
@@ -51,7 +51,7 @@ export function taskRow(t, o) {
   if (kids.length) meta.push(`<span class="mini">${kids.filter(k => k.statut === 'fait').length}/${kids.length} étapes</span>`);
   if (t.recurrence && t.recurrence !== 'aucune') meta.push(`<span class="mini">↻ ${t.recurrence === 'hebdo' ? 'chaque semaine' : 'chaque mois'}</span>`);
   if (t.notes) meta.push(`<span class="mini">${textLinks(t.notes).length ? 'notes et liens' : 'notes'}</span>`);
-  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}"><button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button><button type="button" class="row-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button>${(t.priorite === 'haute' && !done) ? '<span class="prio" title="Priorité haute" aria-label="Priorité haute">!</span>' : '<span></span>'}</div>`;
+  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}"><button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button><button type="button" class="row-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button><span class="row-end">${(t.priorite === 'haute' && !done) ? '<span class="prio" title="Priorité haute" aria-label="Priorité haute">!</span>' : ''}${done ? '' : `<label class="resched" title="Reprogrammer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg><input type="date" class="resched-in" data-action="resched-pick" data-change="resched" data-id="${esc(t.id)}" value="${esc(due || '')}" aria-label="Reprogrammer : ${esc(t.titre)}"></label>`}</span></div>`;
 }
 export function fillDomSelect(sel) {
   if (!sel) return;
@@ -86,6 +86,16 @@ export async function toggleTask(id) {
   }
   toast(done ? 'Fait' : 'Rouverte');
 }
+/* Reprogrammer une tâche à une date (pour une étape calée sur son projet, on décale son écart) */
+export async function reprogrammer(id, date) {
+  const t = get('taches', id); if (!t || !isDate(date)) return;
+  const p = parentOf(t);
+  if (t.parentId && typeof t.offset === 'number' && p && !p.aConfirmer && isDate(p.echeance)) await patch('taches', id, { offset: diff(p.echeance, date) });
+  else await patch('taches', id, { echeance: date, aConfirmer: false });
+  toast(date === addDays(S.today, 1) ? 'Reportée à demain' : 'Reprogrammée au ' + fShort(date));
+}
+action('resched-pick', a => { try { if (a.showPicker) a.showPicker(); } catch (e) { } });
+onChange('@resched', el => { if (el.value) guarded(() => reprogrammer(el.dataset.id, el.value)); });
 /* Création depuis une autre vue (tri d'une note, saisie rapide) */
 export async function createTask(fields) {
   const id = newId('t');

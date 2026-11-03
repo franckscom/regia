@@ -1,6 +1,8 @@
 /* Regia : libellés et listes. Pour changer un libellé ou une valeur par défaut, c'est ici. */
 
-export const APP = { nom: 'Regia', db: 'regia', uiKey: 'regia-ui-v1', scriptMin: 2 };
+/* Démo : adresse terminée par ?demo. Base séparée, contenus fictifs recréés à chaque ouverture, aucune synchro. */
+export const DEMO = typeof location !== 'undefined' && /[?&]demo(=|&|$)/.test(location.search);
+export const APP = { nom: 'Regia', db: DEMO ? 'regia-demo' : 'regia', uiKey: DEMO ? 'regia-demo-ui' : 'regia-ui-v1', scriptMin: 2 };
 
 /* Collections de données (une ligne du Google Sheet = une fiche d'une collection) */
 export const COLLS = ['domaines', 'taches', 'modeles', 'reunions', 'reglages', 'notes', 'agenda', 'contenus', 'exercices', 'reponses', 'suggestions', 'interactions'];

@@ -4,9 +4,9 @@
    Choix du jour enregistrés dans reglages/oggi (synchronisés) : { jour, ajouts: [ids], retraits: [ids] }. */
 import { S, get, rg, put, guarded } from '../core/store.js';
 import { $, esc, ICON } from '../core/util.js';
-import { fShort } from '../core/dates.js';
+import { fShort, addDays } from '../core/dates.js';
 import { sheet, action, onInput, openSheet, renderSheet, ui, head } from '../core/ui.js';
-import { tasks, dueOf, visible, dom, domColor, toggleTask, openTaskEditor } from './taches.js';
+import { tasks, dueOf, visible, dom, domColor, toggleTask, openTaskEditor, reprogrammer } from './taches.js';
 
 function etat() {
   const o = rg('oggi');
@@ -37,7 +37,7 @@ export function renderOggiBtn() {
 
 function rowHTML(t) {
   const fait = !ouverte(t), c = domColor(dom(t.domaine));
-  return `<li class="oggi-row${fait ? ' fait' : ''}" style="--c:${c}"><button type="button" class="oggi-check" data-action="oggi-check" data-id="${esc(t.id)}" aria-pressed="${fait}" aria-label="${fait ? 'Rouvrir' : 'Cocher'} : ${esc(t.titre)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button type="button" class="oggi-t" data-action="oggi-open" data-id="${esc(t.id)}">${esc(t.titre)}</button><button type="button" class="oggi-x" data-action="oggi-retirer" data-id="${esc(t.id)}" aria-label="Retirer de la liste du jour">${ICON.close}</button></li>`;
+  return `<li class="oggi-row${fait ? ' fait' : ''}" style="--c:${c}"><button type="button" class="oggi-check" data-action="oggi-check" data-id="${esc(t.id)}" aria-pressed="${fait}" aria-label="${fait ? 'Rouvrir' : 'Cocher'} : ${esc(t.titre)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button type="button" class="oggi-t" data-action="oggi-open" data-id="${esc(t.id)}">${esc(t.titre)}</button>${fait ? '' : `<button type="button" class="oggi-plus1" data-action="oggi-plus1" data-id="${esc(t.id)}" aria-label="Reporter à demain : ${esc(t.titre)}" title="Reporter à demain">+1</button>`}<button type="button" class="oggi-x" data-action="oggi-retirer" data-id="${esc(t.id)}" aria-label="Retirer de la liste du jour">${ICON.close}</button></li>`;
 }
 function pickRows(q) {
   const inList = new Set(oggiList().map(t => t.id)), s = String(q || '').trim().toLowerCase();
@@ -63,6 +63,7 @@ sheet('oggi', {
 action('oggi', () => openSheet({ kind: 'oggi' }));
 action('oggi-check', a => guarded(() => toggleTask(a.dataset.id)));
 action('oggi-open', a => { if (get('taches', a.dataset.id)) openTaskEditor(a.dataset.id); });
+action('oggi-plus1', a => guarded(async () => { const id = a.dataset.id; await saveEtat(e => { e.ajouts = e.ajouts.filter(x => x !== id); }); await reprogrammer(id, addDays(S.today, 1)); }));
 action('oggi-retirer', a => guarded(() => saveEtat(e => { const id = a.dataset.id; e.ajouts = e.ajouts.filter(x => x !== id); if (!e.retraits.includes(id)) e.retraits.push(id); })));
 action('oggi-ajouter', a => guarded(async () => { const id = a.dataset.id; await saveEtat(e => { e.retraits = e.retraits.filter(x => x !== id); if (!e.ajouts.includes(id)) e.ajouts.push(id); }); if (ui.sheet) { ui.sheet.pick = false; ui.sheet.q = ''; renderSheet(); } }));
 action('oggi-pick', () => { if (ui.sheet) { ui.sheet.pick = true; renderSheet(); setTimeout(() => { const f = $('#oggi-q'); if (f) f.focus(); }, 40); } });

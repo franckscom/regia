@@ -8,6 +8,7 @@ import { reunions, byReu, reuRow } from './reunions.js';
 import { aTrier } from './notes.js';
 import { semaineContenus, contRow, interactionsJour } from './contenus.js';
 import { exosJour } from './exercices.js';
+import { DEMO } from '../core/config.js';
 import { agendaCache, syncUrl, fAgo } from '../core/sync.js';
 import { LocalDB } from '../core/db.js';
 
@@ -47,7 +48,7 @@ function renderStrip() {
 /* Agenda Google : aujourd'hui et demain, d'après la dernière synchro */
 function evDay(e) { return e.journee ? e.date : dayOfMs(e.debut); }
 function evOn(e, d) { return e.journee ? (e.date <= d && (e.dateFin && e.dateFin >= e.date ? e.dateFin : e.date) >= d) : evDay(e) === d; }
-function calLink(a, d) { const p = d.split('-'); return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}?authuser=${encodeURIComponent((a && a.agenda) || 'franckscom360@gmail.com')}`; }
+function calLink(a, d) { const p = d.split('-'); return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}${DEMO ? '' : '?authuser=' + encodeURIComponent((a && a.agenda) || 'franckscom360@gmail.com')}`; }
 function agendaHTML() {
   const a = agendaCache(), pend = list('agenda').filter(x => x.etat === 'a_creer' || x.etat === 'erreur');
   if (!a && !pend.length) return '';
