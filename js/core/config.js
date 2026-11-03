@@ -42,14 +42,16 @@ export const IDEE_GENRES = [['service', 'Idée de service'], ['concept', 'Concep
 export const VEILLE_GENRES = [['personne', 'Personne'], ['organisation', 'Organisation'], ['site', 'Site web'], ['app', 'App ou outil'], ['autre', 'Autre']];
 export const VEILLE_SUIVI = [['a_approfondir', 'À approfondir'], ['approfondi', 'Approfondi'], ['suivi', 'Suivi sur LinkedIn']];
 
-/* Contenus : plateformes, étapes, comptes */
+/* Contenus : plateformes, étapes, comptes. Rythme = contenus par semaine ; 0.5 = un toutes les deux semaines. */
 export const PLATEFORMES = {
   linkedin: { nom: 'LinkedIn', etapes: [['idee', 'Idée'], ['redaction', 'Rédaction'], ['visuel', 'Visuel'], ['pret', 'Prêt'], ['publie', 'Publié']], formats: [['post', 'Post'], ['carrousel', 'Carrousel'], ['article', 'Article'], ['video', 'Vidéo']] },
+  substack: { nom: 'Substack', etapes: [['idee', 'Idée'], ['scaletta', 'Scaletta'], ['redaction', 'Rédaction'], ['relecture', 'Relecture et visuel'], ['pret', 'Prêt'], ['publie', 'Publié']], formats: [['article', 'Article'], ['newsletter', 'Newsletter'], ['note', 'Note']] },
   youtube: { nom: 'YouTube', etapes: [['idee', 'Idée'], ['script', 'Script'], ['voix', 'Voix off'], ['medias', 'Médias'], ['montage', 'Montage'], ['pret', 'Prêt'], ['publie', 'Publié']], formats: [['video', 'Vidéo'], ['short', 'Short']] }
 };
 export const COMPTES_DEFAUT = [
   { id: 'li-franck', nom: 'LinkedIn Franck', court: 'Franck', plateforme: 'linkedin', couleur: 'encre', rythme: 1, pause: false },
   { id: 'li-takeoff', nom: 'LinkedIn TakeOff!', court: 'TakeOff!', plateforme: 'linkedin', couleur: 'framboise', rythme: 2, pause: false },
+  { id: 'ss-franck', nom: 'Substack Franck', court: 'Substack', plateforme: 'substack', couleur: 'ardoise', rythme: 0.5, pause: false },
   { id: 'yt-tfh', nom: 'The French Habit', court: 'TFH', plateforme: 'youtube', couleur: 'sapin', rythme: 1, pause: true },
   { id: 'yt-fc', nom: 'Français Connecté', court: 'FC', plateforme: 'youtube', couleur: 'lagon', rythme: 1, pause: true },
   { id: 'yt-iei', nom: 'Impatto & Influenza', court: 'IeI', plateforme: 'youtube', couleur: 'prune', rythme: 1, pause: true },

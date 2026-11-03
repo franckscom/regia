@@ -2,13 +2,13 @@
 import { S, list, get, put, patch, remove, guarded, rg } from '../core/store.js';
 import { $, esc, clone, clean, toast, ICON } from '../core/util.js';
 import { stamp } from '../core/dates.js';
-import { APP, COLLS, PALETTE, PALETTE_NOMS, INTER_COMPTES, color } from '../core/config.js';
+import { APP, COLLS, PALETTE, PALETTE_NOMS, INTER_COMPTES, PLATEFORMES, color } from '../core/config.js';
 import { VIEWS, view, action, onChange, sheet, openSheet, head, foot, gate, masques, refresh } from '../core/ui.js';
 import { LocalDB } from '../core/db.js';
 import { syncSection } from '../core/sync.js';
 import { saveFile } from '../core/files.js';
 import { tasks, domList, domColor, jTxt, openModeleEditor, dom } from './taches.js';
-import { comptes } from './contenus.js';
+import { comptes, normRythme } from './contenus.js';
 
 export const NAV_ORDER = ['aujourdhui', 'notes', 'taches', 'contenus', 'planning', 'reunions', 'exercices', 'candidatures'];
 
@@ -23,8 +23,8 @@ function renderSettings() {
   h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Onglets</h2></div>`;
   h += NAV_ORDER.filter(k => VIEWS.has(k) && VIEWS.get(k).masquable).map(k => `<div class="set-row set-row-2"><div class="set-txt"><span class="set-name">${esc(VIEWS.get(k).label)}</span><span class="set-meta">${m.includes(k) ? 'masqué' : 'affiché'}</span></div><div class="set-actions"><button type="button" class="btn btn-sm" data-action="toggle-onglet" data-id="${k}">${m.includes(k) ? 'Afficher' : 'Masquer'}</button></div></div>`).join('');
   h += `<p class="prose">« Aujourd’hui » et les Réglages restent toujours visibles. Sur téléphone, les premiers onglets affichés vont dans la barre du bas, les autres dans « Plus ». Pour un nouvel onglet ou une nouvelle fonction, demande-le à Claude : il met l’app à jour et tes données ne bougent pas.</p></section>`;
-  h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Comptes et rythmes</h2></div><p class="prose">Nombre de contenus par semaine pour chaque compte. Un compte en pause n’apparaît pas dans la couverture du calendrier.</p>`;
-  h += comptes().map(c => `<div class="set-row"><span class="sq" style="--c:${color(c.couleur)}"></span><div class="set-txt"><span class="set-name">${esc(c.nom)}</span><span class="set-meta">${c.plateforme === 'youtube' ? 'YouTube' : 'LinkedIn'}${c.pause ? ' · en pause' : ''}</span></div><div class="set-actions"><label class="num"><input type="number" min="0" max="14" inputmode="numeric" data-change="rythme" data-id="${esc(c.id)}" value="${c.rythme}" aria-label="Contenus par semaine pour ${esc(c.nom)}"><span>/ sem.</span></label><button type="button" class="btn btn-sm${c.pause ? '' : ' btn-ghost'}" data-action="compte-pause" data-id="${esc(c.id)}">${c.pause ? 'Réactiver' : 'Mettre en pause'}</button></div></div>`).join('');
+  h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Comptes et rythmes</h2></div><p class="prose">Nombre de contenus par semaine pour chaque compte (0,5 = un toutes les deux semaines). Un compte en pause n’apparaît pas dans la couverture du calendrier.</p>`;
+  h += comptes().map(c => `<div class="set-row"><span class="sq" style="--c:${color(c.couleur)}"></span><div class="set-txt"><span class="set-name">${esc(c.nom)}</span><span class="set-meta">${esc((PLATEFORMES[c.plateforme] || PLATEFORMES.linkedin).nom)}${c.pause ? ' · en pause' : ''}</span></div><div class="set-actions"><label class="num"><input type="number" min="0" max="14" step="${c.rythme > 0 && c.rythme < 1 ? '0.5' : '1'}" inputmode="decimal" data-change="rythme" data-id="${esc(c.id)}" value="${c.rythme}" aria-label="Contenus par semaine pour ${esc(c.nom)}"><span>/ sem.</span></label><button type="button" class="btn btn-sm${c.pause ? '' : ' btn-ghost'}" data-action="compte-pause" data-id="${esc(c.id)}">${c.pause ? 'Réactiver' : 'Mettre en pause'}</button></div></div>`).join('');
   h += '</section>';
   const io = rg('interactions');
   h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Interactions LinkedIn</h2></div><p class="prose">Objectifs par jour. Mets 0 pour retirer une action de la liste du jour.</p>`;
@@ -60,7 +60,7 @@ async function saveComptes(fn) {
   fn(L); await put('reglages', 'comptes', { liste: L });
 }
 action('compte-pause', a => guarded(async () => { await saveComptes(L => { const c = L.find(x => x.id === a.dataset.id); if (c) c.pause = !c.pause; }); toast('Enregistré'); }));
-onChange('@rythme', el => guarded(async () => { const v = Math.max(0, Math.min(14, Math.round(Number(el.value) || 0))); await saveComptes(L => { const c = L.find(x => x.id === el.dataset.id); if (c) c.rythme = v; }); toast('Rythme enregistré'); }));
+onChange('@rythme', el => guarded(async () => { const v = normRythme(String(el.value).replace(',', '.')); await saveComptes(L => { const c = L.find(x => x.id === el.dataset.id); if (c) c.rythme = v; }); toast('Rythme enregistré'); }));
 onChange('@inter', el => guarded(async () => {
   const o = clean(clone(rg('interactions')) || {}), c = el.dataset.compte;
   o[c] = Object.assign({}, o[c] || {}, { [el.dataset.k]: Math.max(0, Math.min(50, Math.round(Number(el.value) || 0))) });

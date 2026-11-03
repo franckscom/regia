@@ -10,8 +10,17 @@ export function comptes() {
   const ov = Array.isArray(rg('comptes').liste) ? rg('comptes').liste : [];
   return COMPTES_DEFAUT.map(c => {
     const o = ov.find(x => x && x.id === c.id) || {};
-    return Object.assign({}, c, { rythme: Number.isFinite(Number(o.rythme)) && o.rythme !== null && o.rythme !== '' ? Math.max(0, Math.min(14, Number(o.rythme))) : c.rythme, pause: typeof o.pause === 'boolean' ? o.pause : c.pause });
+    return Object.assign({}, c, { rythme: Number.isFinite(Number(o.rythme)) && o.rythme !== null && o.rythme !== '' ? normRythme(o.rythme) : c.rythme, pause: typeof o.pause === 'boolean' ? o.pause : c.pause });
   });
+}
+/* Rythme : entier par semaine, ou 0.5 (un contenu toutes les deux semaines). */
+export function normRythme(v) { const n = Number(v); if (!Number.isFinite(n) || n <= 0) return 0; return n < 1 ? 0.5 : Math.min(14, Math.round(n)); }
+/* Fenêtre de couverture d'un compte pour la semaine qui commence le lundi mon :
+   la semaine elle-même, ou la quinzaine (semaines ISO impaire + paire) pour un rythme de 0.5. */
+function fenetre(c, mon) {
+  if (!(c.rythme > 0 && c.rythme < 1)) return { debut: mon, fin: addDays(mon, 6), cible: c.rythme, premiere: true };
+  const debut = isoWeek(mon) % 2 === 1 ? mon : addDays(mon, -7);
+  return { debut, fin: addDays(debut, 13), cible: 1, premiere: debut === mon };
 }
 export function compte(id) { return comptes().find(c => c.id === id) || null; }
 function plat(c) { return PLATEFORMES[(c && c.plateforme) || 'linkedin'] || PLATEFORMES.linkedin; }
@@ -35,7 +44,7 @@ export function semaineContenus() {
   const mon = mondayOf(S.today), sun = addDays(mon, 6), all = contenus();
   const actifs = comptes().filter(c => !c.pause && c.rythme > 0);
   let prevus = 0, cible = 0;
-  for (const c of actifs) { const n = all.filter(x => x.compte === c.id && isDate(x.datePub) && x.datePub >= mon && x.datePub <= sun).length; prevus += Math.min(n, c.rythme); cible += c.rythme; }
+  for (const c of actifs) { const f = fenetre(c, mon); const n = all.filter(x => x.compte === c.id && isDate(x.datePub) && x.datePub >= f.debut && x.datePub <= f.fin).length; prevus += Math.min(n, f.cible); cible += f.cible; }
   const aPublier = all.filter(x => !isPub(x) && isDate(x.datePub) && x.datePub >= S.today && x.datePub <= addDays(S.today, 6)).sort(byPub);
   const retard = all.filter(x => !isPub(x) && isDate(x.datePub) && x.datePub < S.today).sort(byPub);
   return { prevus, cible, aPublier, retard };
@@ -65,9 +74,13 @@ function renderCalendrier() {
     let rows = '';
     for (const c of actifs) {
       const items = all.filter(x => x.compte === c.id && isDate(x.datePub) && x.datePub >= mon && x.datePub <= sun).sort(byPub);
-      const manque = Math.max(0, c.rythme - items.length);
+      const f = fenetre(c, mon), nF = f.cible === c.rythme ? items.length : all.filter(x => x.compte === c.id && isDate(x.datePub) && x.datePub >= f.debut && x.datePub <= f.fin).length;
+      const manqueF = Math.max(0, f.cible - nF);
+      /* Quinzaine : le trou s'affiche sur la semaine encore à venir (la 1re, ou la 2e si la 1re est passée). */
+      const manque = f.cible === c.rythme ? manqueF : ((f.premiere || w === 0) ? manqueF : 0);
       const sugg = w === 0 ? (S.today > mon ? S.today : addDays(mon, 1)) : addDays(mon, 1);
-      rows += `<div class="cov"><div class="cov-h">${compteTag(c)}<span class="cov-n${manque ? ' miss' : ' ok'}">${items.length}/${c.rythme}</span></div><div class="cov-items">${items.map(x => `<button type="button" class="cchip${isPub(x) ? ' done' : ''}" data-action="cont-edit" data-id="${esc(x.id)}"><span class="date">${esc(fDayM(x.datePub))}</span> ${esc(x.titre || 'Contenu')} <span class="etape e-${esc(x.etape || 'idee')}">${esc(etapeLabel(x))}</span></button>`).join('')}${manque ? `<button type="button" class="cchip hole" data-action="cont-new" data-compte="${esc(c.id)}" data-date="${sugg}">+ ${manque} à prévoir</button>` : ''}</div></div>`;
+      const quinz = f.cible !== c.rythme ? ' <span class="mini">quinzaine</span>' : '';
+      rows += `<div class="cov"><div class="cov-h">${compteTag(c)}<span class="cov-n${manqueF ? ' miss' : ' ok'}">${nF}/${f.cible}</span>${quinz}</div><div class="cov-items">${items.map(x => `<button type="button" class="cchip${isPub(x) ? ' done' : ''}" data-action="cont-edit" data-id="${esc(x.id)}"><span class="date">${esc(fDayM(x.datePub))}</span> ${esc(x.titre || 'Contenu')} <span class="etape e-${esc(x.etape || 'idee')}">${esc(etapeLabel(x))}</span></button>`).join('')}${manque ? `<button type="button" class="cchip hole" data-action="cont-new" data-compte="${esc(c.id)}" data-date="${sugg}">+ ${manque} à prévoir</button>` : ''}</div></div>`;
     }
     h += `<section class="sec cweek${w === 0 ? ' now' : ''}"><h2 class="sec-h"><span>S${isoWeek(mon)} · ${esc(weekLabel(mon))}</span>${w === 0 ? '<span class="cnt">cette semaine</span>' : ''}</h2>${rows}</section>`;
   }
