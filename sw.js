@@ -1,7 +1,7 @@
 /* Regia : fonctionnement hors ligne.
    À chaque mise à jour de l'app : python3 outils/maj_sw.py (liste des fichiers et VERSION).
    Les appareils proposent alors « Mettre à jour ». */
-const VERSION = '2026-11-03.1';
+const VERSION = '2026-11-03.2';
 const CACHE = 'regia-' + VERSION;
 const CORE = [
   './',
@@ -39,6 +39,7 @@ const CORE = [
   'js/tabs/contenus.js',
   'js/tabs/exercices.js',
   'js/tabs/notes.js',
+  'js/tabs/oggi.js',
   'js/tabs/planning.js',
   'js/tabs/reglages.js',
   'js/tabs/reunions.js',

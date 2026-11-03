@@ -13,6 +13,7 @@ import './tabs/planning.js';
 import './tabs/reunions.js';
 import './tabs/exercices.js';
 import './tabs/candidatures.js';
+import { oggiRefresh } from './tabs/oggi.js';
 import { NAV_ORDER, importBackup } from './tabs/reglages.js';
 
 /* ---- Navigation ---- */
@@ -77,6 +78,7 @@ function refresh() {
   const pill = $('#today-pill'); if (pill) pill.innerHTML = ICON.cal + '<span>' + esc(fShort(S.today) + ' · S' + isoWeek(S.today)) + '</span>';
   const def = VIEWS.get(S.view); if (def) def.render();
   renderSync();
+  oggiRefresh();
 }
 let rq = 0;
 function schedule() { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; refresh(); }); }
