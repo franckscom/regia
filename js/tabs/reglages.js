@@ -7,7 +7,7 @@ import { VIEWS, view, action, onChange, sheet, openSheet, head, foot, gate, masq
 import { LocalDB } from '../core/db.js';
 import { syncSection } from '../core/sync.js';
 import { saveFile } from '../core/files.js';
-import { tasks, domList, domColor, jTxt, openModeleEditor } from './taches.js';
+import { tasks, domList, domColor, jTxt, openModeleEditor, dom } from './taches.js';
 import { comptes } from './contenus.js';
 
 export const NAV_ORDER = ['aujourdhui', 'notes', 'taches', 'contenus', 'planning', 'reunions', 'exercices', 'candidatures'];
@@ -35,7 +35,7 @@ function renderSettings() {
   h += '</section>';
   const mods = list('modeles').sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
   h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Modèles de rétroplanning</h2><button type="button" class="btn btn-sm" data-action="new-modele">+ Modèle</button></div>`;
-  h += mods.map(md => `<div class="set-row set-row-2"><div class="set-txt"><span class="set-name">${esc(md.nom)}</span><span class="set-meta mono">${(Array.isArray(md.etapes) ? md.etapes : []).map(e => jTxt(e.offset)).join(' · ') || 'aucune étape'}</span></div><div class="set-actions"><button type="button" class="btn btn-sm" data-action="edit-modele" data-id="${esc(md.id)}">Modifier</button></div></div>`).join('') || '<p class="empty-line">Aucun modèle.</p>';
+  h += mods.map(md => `<div class="set-row set-row-2"><div class="set-txt"><span class="set-name">${esc(md.nom)}</span><span class="set-meta mono">${(Array.isArray(md.etapes) ? md.etapes : []).map(e => jTxt(e.offset)).join(' · ') || 'aucune étape'}</span>${Array.isArray(md.domaines) && md.domaines.length ? `<span class="set-meta">Suggéré pour : ${esc(md.domaines.map(x => dom(x).nom).join(', '))}</span>` : ''}</div><div class="set-actions"><button type="button" class="btn btn-sm" data-action="edit-modele" data-id="${esc(md.id)}">Modifier</button></div></div>`).join('') || '<p class="empty-line">Aucun modèle.</p>';
   h += '</section>';
   h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Sauvegarde</h2></div><p class="prose">Télécharge une copie complète de tes données (fichier JSON), ou réimporte une copie : les fiches importées seront envoyées à tes autres appareils à la prochaine synchro.</p><div class="set-btns"><button type="button" class="btn" data-action="export">Télécharger une sauvegarde</button><button type="button" class="btn" data-action="import">Importer une sauvegarde</button></div></section>`;
   h += `<section class="set-sec"><div class="set-h"><h2 class="sec-h">Avec Claude</h2></div><p class="prose">Dans n’importe quelle conversation Claude, dicte « Note : … » : Claude la résume, propose un classement et la dépose dans « À trier ». Tu peux aussi demander « Ajoute dans Regia le rendu du projet final le 15 décembre » ou « Mets ce compte-rendu dans la réunion du 5 novembre ». Chaque lundi, Claude corrige tes exercices, prépare ceux de la semaine et propose des cibles LinkedIn. Touche Synchroniser pour voir tout cela ici.</p></section>`;

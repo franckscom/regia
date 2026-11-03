@@ -134,6 +134,7 @@ input:disabled{opacity:.45}
 .qa #qa-titre{flex:1 1 260px}
 .qa select{flex:1 1 150px}
 .qa input[type="date"]{flex:0 1 170px}
+.qa #qa-mod{flex:1 1 170px}
 .qa .btn{flex:0 0 auto}
 .shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
 .shortcut{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13.5px;font-weight:700;color:var(--ink);text-decoration:none}

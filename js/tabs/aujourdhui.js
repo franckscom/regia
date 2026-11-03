@@ -2,8 +2,8 @@
 import { S, list, saveUI, guarded, patch } from '../core/store.js';
 import { $, esc, ICON, toast } from '../core/util.js';
 import { isDate, addDays, diff, F_LONG, parseD, cap, isoWeek, fShort, hm, dayOfMs, pad } from '../core/dates.js';
-import { view, action, onSubmit, section, gate, liens, tabOn, refresh } from '../core/ui.js';
-import { tasks, visible, dueOf, byDue, taskRow, dom, domColor, fillDomSelect, parentOf, createTask } from './taches.js';
+import { view, action, onSubmit, section, gate, liens, tabOn, refresh, onChange } from '../core/ui.js';
+import { tasks, visible, dueOf, byDue, taskRow, dom, domColor, fillDomSelect, parentOf, createTask, modeleOptions } from './taches.js';
 import { reunions, byReu, reuRow } from './reunions.js';
 import { aTrier } from './notes.js';
 import { semaineContenus, contRow, interactionsJour } from './contenus.js';
@@ -99,19 +99,25 @@ view('aujourdhui', {
   label: 'Regia',
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><rect x="11" y="12.5" width="4" height="4" rx=".6" fill="currentColor" stroke="none"/></svg>',
   shell: () => `<div class="v-head"><h1><span class="hl">Regia</span></h1><p class="v-sub" id="v-sub"></p></div>
-    <form class="qa" id="qa-form" autocomplete="off"><label class="sr-only" for="qa-titre">Nouvelle tâche</label><input id="qa-titre" placeholder="Nouvelle tâche…"><label class="sr-only" for="qa-dom">Domaine</label><select id="qa-dom"></select><label class="sr-only" for="qa-date">Échéance</label><input id="qa-date" type="date"><button class="btn btn-primary" type="submit">Ajouter</button></form>
+    <form class="qa" id="qa-form" autocomplete="off"><label class="sr-only" for="qa-titre">Nouvelle tâche</label><input id="qa-titre" placeholder="Nouvelle tâche…"><label class="sr-only" for="qa-dom">Domaine</label><select id="qa-dom"></select><label class="sr-only" for="qa-date">Échéance</label><input id="qa-date" type="date"><label class="sr-only" for="qa-mod">Modèle de rétroplanning</label><select id="qa-mod"></select><button class="btn btn-primary" type="submit">Ajouter</button></form>
     <div id="v-short"></div><div id="v-tiles"></div><div id="v-strip"></div><div id="v-today"></div>`,
   render() {
-    fillDomSelect($('#qa-dom'));
+    fillDomSelect($('#qa-dom')); fillModSelect();
     const sub = $('#v-sub'); if (sub) sub.textContent = cap(F_LONG.format(parseD(S.today))) + ' · semaine ' + isoWeek(S.today);
     renderShortcuts(); renderTiles(); renderStrip(); renderToday();
   }
 });
+function fillModSelect() {
+  const sel = $('#qa-mod'), dm = $('#qa-dom'); if (!sel) return;
+  const has = list('modeles').length; sel.hidden = !has; if (!has) return;
+  sel.innerHTML = modeleOptions(dm ? dm.value : '', '', 'Sans rétroplanning');
+}
+onChange('qa-dom', () => fillModSelect());
 onSubmit('qa-form', async () => {
   const ti = $('#qa-titre'), titre = ti.value.trim(); if (!titre) { ti.focus(); return; }
-  const domaine = $('#qa-dom').value, date = $('#qa-date').value || null;
-  const ok = await guarded(() => createTask({ titre, domaine, echeance: date }));
-  if (ok) { ti.value = ''; $('#qa-date').value = ''; S.ui.lastDom = domaine; saveUI(); toast(date ? 'Ajoutée pour le ' + fShort(date) : 'Ajoutée dans « À planifier »'); }
+  const domaine = $('#qa-dom').value, date = $('#qa-date').value || null, modele = ($('#qa-mod') || {}).value || '';
+  const ok = await guarded(() => createTask(Object.assign({ titre, domaine, echeance: date }, modele ? { _modele: modele } : {})));
+  if (ok) { ti.value = ''; $('#qa-date').value = ''; fillModSelect(); S.ui.lastDom = domaine; saveUI(); toast(date ? 'Ajoutée pour le ' + fShort(date) : 'Ajoutée dans « À planifier »'); }
 });
 action('goto', a => { if (a.dataset.mode && a.dataset.view === 'contenus') { S.ui.contMode = a.dataset.mode; saveUI(); } if (location.hash === '#' + a.dataset.view) refresh(); else location.hash = '#' + a.dataset.view; });
 action('ag-retry', a => guarded(async () => { await patch('agenda', a.dataset.id, { etat: 'a_creer', erreur: null }); toast('Nouvel essai à la prochaine synchro'); }));

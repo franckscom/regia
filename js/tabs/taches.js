@@ -3,7 +3,7 @@ import { S, list, get, put, patch, remove, saveUI, guarded } from '../core/store
 import { $, esc, clone, opts, newId, toast, ICON, linksHTML, textLinks } from '../core/util.js';
 import { isDate, addDays, addMonths, diff, fShort } from '../core/dates.js';
 import { STATUTS, PRIORITES, RECURRENCES, TACHE_DEFAUT, color } from '../core/config.js';
-import { view, action, onInput, sheet, openSheet, renderSheet, ui, head, foot, gate, empty, liens, refresh, onChange } from '../core/ui.js';
+import { view, action, onInput, sheet, openSheet, renderSheet, ui, head, foot, gate, empty, liens, refresh, onChange, chipsMulti } from '../core/ui.js';
 
 /* ---- Données ---- */
 export function tasks() { return list('taches'); }
@@ -96,10 +96,24 @@ export async function reprogrammer(id, date) {
 }
 action('resched-pick', a => { try { if (a.showPicker) a.showPicker(); } catch (e) { } });
 onChange('@resched', el => { if (el.value) guarded(() => reprogrammer(el.dataset.id, el.value)); });
+/* ---- Modèles : suggestion selon le domaine ---- */
+export function modelesTries(domaine) {
+  const all = list('modeles').sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+  const sug = all.filter(m => Array.isArray(m.domaines) && m.domaines.includes(domaine));
+  return { sug, autres: all.filter(m => !sug.includes(m)) };
+}
+/* Options d'un menu de modèles : suggérés pour le domaine d'abord. vide = libellé de l'option « aucun » (ou null) */
+export function modeleOptions(domaine, cur, vide) {
+  const { sug, autres } = modelesTries(domaine), o = m => `<option value="${esc(m.id)}"${m.id === cur ? ' selected' : ''}>${esc(m.nom)}</option>`;
+  return (vide ? `<option value="">${esc(vide)}</option>` : '') + (sug.length ? `<optgroup label="Suggérés pour ce domaine">${sug.map(o).join('')}</optgroup>` : '') + (autres.length ? `<optgroup label="${sug.length ? 'Autres modèles' : 'Modèles'}">${autres.map(o).join('')}</optgroup>` : '');
+}
+function etapesDe(m) { return (m && Array.isArray(m.etapes) ? m.etapes : []).map(e => ({ titre: String(e.titre || 'Étape'), offset: Number(e.offset) || 0 })); }
 /* Création depuis une autre vue (tri d'une note, saisie rapide) */
 export async function createTask(fields) {
   const id = newId('t');
+  const modele = fields._modele ? get('modeles', fields._modele) : null;
   await put('taches', id, Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today }, fields));
+  for (const e of etapesDe(modele)) await put('taches', newId('t'), Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today, titre: e.titre, domaine: fields.domaine || '', parentId: id, offset: e.offset }));
   return id;
 }
 
@@ -194,7 +208,7 @@ function sheetTask(sh) {
     const pd = parent ? dueOf(parent) : null;
     h += `<div class="fld"><span class="fld-l">Position dans le rétroplanning</span><div class="jrow"><span class="jpre">J−</span><input id="f-jb" type="number" inputmode="numeric" data-field="jbefore" value="${-d.offset}" aria-label="Jours avant l’échéance"><span class="jcalc" id="f-jcalc">${pd ? esc(fShort(addDays(pd, d.offset))) : 'date calculée dès que l’échéance sera fixée'}</span></div><p class="hint">Nombre de jours avant l’échéance de la tâche principale (nombre négatif : après).</p></div>`;
   } else {
-    h += `<div class="fld-row"><label class="fld"><span class="fld-l">Échéance</span><input id="f-ech" type="date" data-field="echeance" value="${d.echeance || ''}"${d.aConfirmer ? ' disabled' : ''}></label>${isStep ? '' : `<label class="fld"><span class="fld-l">Début (barre du Gantt)</span><input id="f-deb" type="date" data-field="debut" value="${d.debut || ''}"></label>`}</div>`;
+    h += `<div class="fld-row"><label class="fld"><span class="fld-l">Échéance</span><input id="f-ech" type="date" data-field="echeance" value="${d.echeance || ''}"${d.aConfirmer ? ' disabled' : ''}></label>${isStep ? '' : (sh.isNew && list('modeles').length ? `<label class="fld"><span class="fld-l">Modèle de rétroplanning</span><select id="f-mod-new">${modeleOptions(d.domaine, sh.modele || '', 'Aucun modèle')}</select></label>` : `<label class="fld"><span class="fld-l">Début (barre du Gantt)</span><input id="f-deb" type="date" data-field="debut" value="${d.debut || ''}"></label>`)}</div>`;
     h += `<div class="checks"><label class="ck"><input id="f-aconf" type="checkbox" data-field="aConfirmer"${d.aConfirmer ? ' checked' : ''}>Date à confirmer</label>${isStep ? '' : `<label class="ck"><input id="f-jal" type="checkbox" data-field="jalon"${d.jalon ? ' checked' : ''}>Jalon important</label>`}</div>`;
   }
   if (!isStep) h += `<label class="fld"><span class="fld-l">Récurrence</span><select id="f-rec" data-field="recurrence">${opts(RECURRENCES, d.recurrence || 'aucune')}</select></label>`;
@@ -203,7 +217,7 @@ function sheetTask(sh) {
     const mods = list('modeles').sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
     h += `<section class="retro" aria-labelledby="retro-h"><h3 id="retro-h">Rétroplanning</h3><p class="hint">Les étapes se calent sur l’échéance : si elle bouge, tout le rétroplanning suit.</p><div id="sheet-steps">${stepsHTML()}</div>
       <div class="retro-add"><input id="f-st-t" placeholder="Nouvelle étape" aria-label="Nouvelle étape"><label class="s-j"><span>J−</span><input id="f-st-j" type="number" inputmode="numeric" value="7" aria-label="Jours avant l’échéance"></label><button type="button" class="btn btn-sm" data-action="step-add">Ajouter</button></div>
-      ${mods.length ? `<div class="retro-model"><select id="f-model" aria-label="Modèle de rétroplanning">${mods.map(m => `<option value="${esc(m.id)}">${esc(m.nom)}</option>`).join('')}</select><button type="button" class="btn btn-sm" data-action="step-model">Appliquer le modèle</button></div>` : ''}</section>`;
+      ${mods.length && !sh.isNew ? `<div class="retro-model"><select id="f-model" aria-label="Modèle de rétroplanning">${modeleOptions(d.domaine, '', null)}</select><button type="button" class="btn btn-sm" data-action="step-model">Appliquer le modèle</button></div>` : ''}</section>`;
   }
   h += '</div>';
   const nKids = sh.steps.filter(s => s.id).length;
@@ -240,6 +254,17 @@ function taskField(sh, t, isChange) {
   const f = t.dataset.field, sf = t.dataset.sfield, d = sh.draft;
   if (f === 'jbefore') { const v = Number(t.value); d.offset = isFinite(v) ? -Math.round(v) : 0; const p = parentOf(d), pd = p ? dueOf(p) : null, lb = $('#f-jcalc'); if (lb && pd) lb.textContent = fShort(addDays(pd, d.offset)); }
   if (isChange && (f === 'echeance' || f === 'aConfirmer')) { const ech = $('#f-ech'); if (ech) ech.disabled = !!d.aConfirmer; renderSteps(); }
+  if (isChange && f === 'domaine') {
+    const nm = $('#f-mod-new'); if (nm) nm.innerHTML = modeleOptions(d.domaine, sh.modele || '', 'Aucun modèle');
+    const am = $('#f-model'); if (am) am.innerHTML = modeleOptions(d.domaine, '', null);
+  }
+  if (isChange && t.id === 'f-mod-new') {
+    sh.steps = sh.steps.filter(x => !x._modele);
+    sh.modele = t.value || '';
+    for (const e of etapesDe(get('modeles', sh.modele))) sh.steps.push({ id: null, titre: e.titre, offset: e.offset, echeance: null, statut: 'a_faire', _modele: true });
+    renderSteps();
+    if (sh.modele && !parentDueDraft()) toast('Modèle appliqué : fixe l’échéance pour dater les étapes');
+  }
   if (isChange && f === 'notes') { const box = $('#f-links'); if (box) box.outerHTML = linksHTML(d.notes, 'f-links', liens()); }
   if (sf) {
     const s = sh.steps[Number(t.dataset.i)]; if (!s) return;
@@ -273,13 +298,14 @@ action('step-model', () => {
 export function openModeleEditor(id) {
   const m = id ? get('modeles', id) : null;
   const steps = (m && Array.isArray(m.etapes)) ? m.etapes.map(e => ({ titre: String(e.titre || ''), offset: Number(e.offset) || 0 })) : [];
-  openSheet({ kind: 'modele', draft: { id: m ? m.id : null, nom: m ? m.nom : '' }, steps, isNew: !m });
+  openSheet({ kind: 'modele', draft: { id: m ? m.id : null, nom: m ? m.nom : '', domaines: (m && Array.isArray(m.domaines)) ? m.domaines.slice() : [] }, steps, isNew: !m });
 }
 sheet('modele', {
   render(sh) {
     const d = sh.draft;
     let h = head(sh.isNew ? 'Nouveau modèle' : 'Modèle de rétroplanning') + '<div class="sheet-body">';
     h += `<label class="fld"><span class="fld-l">Nom du modèle</span><input id="m-nom" data-field="nom" value="${esc(d.nom)}"${sh.isNew ? ' data-autofocus' : ''}></label>`;
+    h += `<fieldset class="fld"><legend class="fld-l">Suggéré pour les domaines</legend>${chipsMulti('domaines', domList(false).map(x => [x.id, x.nom, domColor(x)]), d.domaines)}<p class="hint">Quand tu crées une tâche dans l’un de ces domaines, ce modèle est proposé en premier.</p></fieldset>`;
     h += `<section class="retro"><h3>Étapes</h3><p class="hint">J−21 : 21 jours avant l’échéance de la tâche à laquelle tu appliques le modèle.</p><div id="sheet-steps">${modeleStepsHTML()}</div><div class="retro-add"><input id="f-st-t" placeholder="Nouvelle étape" aria-label="Nouvelle étape"><label class="s-j"><span>J−</span><input id="f-st-j" type="number" inputmode="numeric" value="7" aria-label="Jours avant l’échéance"></label><button type="button" class="btn btn-sm" data-action="step-add">Ajouter</button></div></section>`;
     return h + '</div>' + foot(!sh.isNew);
   },
@@ -287,7 +313,7 @@ sheet('modele', {
     const d = sh.draft, nom = String(d.nom || '').trim();
     if (!nom) throw { code: 'form', message: 'Donne un nom au modèle.' };
     const etapes = sh.steps.filter(s => !s._del && String(s.titre || '').trim()).map(s => ({ titre: String(s.titre).trim(), offset: Number(s.offset) || 0 })).sort((a, b) => a.offset - b.offset);
-    await put('modeles', d.id || newId('m'), { nom, etapes });
+    await put('modeles', d.id || newId('m'), { nom, etapes, domaines: Array.isArray(d.domaines) ? d.domaines : [] });
   },
   del: sh => remove('modeles', sh.draft.id),
   field: taskField
