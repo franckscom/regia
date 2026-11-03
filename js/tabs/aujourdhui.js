@@ -47,7 +47,7 @@ function renderStrip() {
 /* Agenda Google : aujourd'hui et demain, d'après la dernière synchro */
 function evDay(e) { return e.journee ? e.date : dayOfMs(e.debut); }
 function evOn(e, d) { return e.journee ? (e.date <= d && (e.dateFin && e.dateFin >= e.date ? e.dateFin : e.date) >= d) : evDay(e) === d; }
-function calLink(a, d) { const p = d.split('-'); return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}${a && a.agenda ? '?authuser=' + encodeURIComponent(a.agenda) : ''}`; }
+function calLink(a, d) { const p = d.split('-'); return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}?authuser=${encodeURIComponent((a && a.agenda) || 'franckscom360@gmail.com')}`; }
 function agendaHTML() {
   const a = agendaCache(), pend = list('agenda').filter(x => x.etat === 'a_creer' || x.etat === 'erreur');
   if (!a && !pend.length) return '';
@@ -58,7 +58,7 @@ function agendaHTML() {
   let h = '';
   if (a) h += `<div class="evday"><h3>Aujourd’hui</h3>${E0.length ? E0.map(e => row(e, t0)).join('') : '<p class="empty-line">Aucun rendez-vous.</p>'}</div><div class="evday"><h3>Demain</h3>${E1.length ? E1.map(e => row(e, t1)).join('') : '<p class="empty-line">Aucun rendez-vous.</p>'}</div>`;
   if (pend.length) h += pend.map(p => `<div class="evrow pend"><span class="evt">${p.journee ? 'Journée' : esc(p.heure || '')}</span><span class="evn">${esc(p.titre)}<small>${p.etat === 'erreur' ? 'Erreur Google Agenda : ' + esc(p.erreur || '') : esc(fShort(p.date)) + ' · envoi à la prochaine synchro'}</small></span>${p.etat === 'erreur' ? `<button type="button" class="btn btn-sm" data-action="ag-retry" data-id="${esc(p.id)}">Réessayer</button>` : ''}</div>`).join('');
-  return section('agenda', 'Agenda', a ? '' : pend.length, `<div class="evs">${h}</div>${a ? `<p class="hint">Google Agenda, mis à jour ${esc(fAgo(a.maj || LocalDB.meta.lastSync || Date.now()))}.</p>` : ''}`);
+  return section('agenda', 'Agenda', a ? '' : pend.length, `<div class="evs">${h}</div>${a ? `<p class="hint">Google Agenda, mis à jour ${esc(fAgo(a.maj || LocalDB.meta.lastSync || Date.now()))}.</p>` : ''}<p class="hint"><a href="${esc(calLink(a, t0))}" target="_blank" rel="noopener">Ouvrir Google Agenda</a></p>`);
 }
 function renderToday() {
   const el = $('#v-today');

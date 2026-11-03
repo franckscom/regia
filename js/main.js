@@ -1,10 +1,10 @@
 /* Regia : démarrage, navigation et événements. Chaque onglet vit dans js/tabs/. */
-import { S, rebuild } from './core/store.js';
+import { S, rebuild, saveUI } from './core/store.js';
 import { LocalDB } from './core/db.js';
 import { $, esc, toast, ICON } from './core/util.js';
 import { ymd, fShort, isoWeek } from './core/dates.js';
 import { VIEWS, ACTIONS, INPUTS, CHANGES, SUBMITS, hooks, ui, sheet, head, openSheet, closeSheet, onSheetField, masques } from './core/ui.js';
-import { renderSync } from './core/sync.js';
+import { renderSync, agendaCache } from './core/sync.js';
 import { stepAdd } from './tabs/taches.js';
 import './tabs/aujourdhui.js';
 import './tabs/notes.js';
@@ -39,6 +39,25 @@ sheet('plus', {
 });
 ACTIONS.set('nav-plus', () => openSheet({ kind: 'plus' }));
 
+/* ---- Menu des calendriers (clic sur la date en haut à gauche) ---- */
+const COMPTE_AGENDA = 'franckscom360@gmail.com';
+function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+export function gcalUrl(d) {
+  const p = (d || S.today).split('-'), a = agendaCache();
+  return `https://calendar.google.com/calendar/r/day/${Number(p[0])}/${Number(p[1])}/${Number(p[2])}?authuser=${encodeURIComponent((a && a.agenda) || COMPTE_AGENDA)}`;
+}
+sheet('cal', {
+  render() {
+    let h = `<a class="plus-item" href="${esc(gcalUrl())}" target="_blank" rel="noopener" data-action="cal-go">${ICON.cal}<span>Google Agenda<small class="plus-sub">Ta journée d’aujourd’hui</small></span>${ICON.ext}</a>`;
+    if (isIOS()) { const sec = Math.floor((Date.now() - Date.UTC(2001, 0, 1)) / 1000); h += `<a class="plus-item" href="calshow:${sec}" data-action="cal-go">${ICON.cal}<span>Calendrier de l’iPhone<small class="plus-sub">L’app Calendrier d’Apple</small></span></a>`; }
+    if (VIEWS.has('planning') && !masques().includes('planning')) h += `<button type="button" class="plus-item" data-action="cal-planning">${VIEWS.get('planning').icon}<span>Planning de Regia<small class="plus-sub">Tes échéances, jour par jour</small></span></button>`;
+    return head('Calendrier') + `<div class="sheet-body plus-list">${h}</div>`;
+  }
+});
+ACTIONS.set('cal-menu', () => openSheet({ kind: 'cal' }));
+ACTIONS.set('cal-go', () => { setTimeout(closeSheet, 300); });
+ACTIONS.set('cal-planning', () => { S.ui.planMode = 'echeances'; try { saveUI(); } catch (e) { } closeSheet(); if (location.hash === '#planning') refresh(); else location.hash = '#planning'; });
+
 function currentView() {
   const h = (location.hash || '').slice(1);
   if (h === 'reglages') return h;
@@ -55,7 +74,7 @@ function mountView(v) {
 function refresh() {
   renderNav();
   if (S.view !== 'reglages' && masques().includes(S.view)) { location.hash = '#aujourdhui'; return; }
-  const pill = $('#today-pill'); if (pill) pill.textContent = fShort(S.today) + ' · S' + isoWeek(S.today);
+  const pill = $('#today-pill'); if (pill) pill.innerHTML = ICON.cal + '<span>' + esc(fShort(S.today) + ' · S' + isoWeek(S.today)) + '</span>';
   const def = VIEWS.get(S.view); if (def) def.render();
   renderSync();
 }
