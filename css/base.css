@@ -258,7 +258,11 @@ legend.fld-l{padding:0;margin-bottom:5px}
 .oggi-check{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--c);background:none;color:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
 .oggi-check svg{width:18px;height:18px}
 .oggi-check[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
-.oggi-t{flex:1;min-width:0;background:none;border:0;padding:8px 0;text-align:left;font:inherit;font-size:17px;font-weight:600;color:var(--ink);cursor:pointer}
+.oggi-tw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.oggi-t{width:100%;min-width:0;background:none;border:0;padding:8px 0;text-align:left;font:inherit;font-size:17px;font-weight:600;color:var(--ink);cursor:pointer}
+.oggi-parent{background:none;border:0;padding:0 0 8px;margin-top:-4px;text-align:left;font:inherit;font-size:13px;line-height:1.3;color:var(--ink-2);cursor:pointer}
+.oggi-parent b{font-weight:600;color:var(--ink)}
+.oggi-parent:hover b,.oggi-parent:focus-visible b{text-decoration:underline}
 .oggi-row.fait .oggi-t{text-decoration:line-through;color:var(--ink-2);font-weight:400}
 .oggi-x{flex:none;width:34px;height:34px;border:0;background:none;color:var(--ink-2);cursor:pointer;display:grid;place-items:center;border-radius:50%}
 .oggi-x svg{width:16px;height:16px}

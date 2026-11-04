@@ -9,7 +9,7 @@ import { S, get, rg, put, guarded } from '../core/store.js';
 import { $, esc, ICON } from '../core/util.js';
 import { fShort, addDays } from '../core/dates.js';
 import { sheet, action, onInput, openSheet, renderSheet, ui, head } from '../core/ui.js';
-import { tasks, dueOf, visible, dom, domColor, toggleTask, openTaskEditor, reprogrammer } from './taches.js';
+import { tasks, dueOf, visible, dom, domColor, toggleTask, openTaskEditor, reprogrammer, parentOf, childrenOf } from './taches.js';
 
 const LISTES = {
   oggi: { nom: 'OGGI', jour: () => S.today, vide: 'Rien d’échu pour aujourd’hui. Ajoute une tâche si tu veux t’en fixer une.', auto: d => d <= S.today },
@@ -54,16 +54,22 @@ function renderBtn(k) {
   b.setAttribute('aria-label', n ? `${nom} : ${n} à faire` : nom);
 }
 
+/* Étape d'un rétroplanning : la tâche principale et l'avancement de ses étapes */
+function parentLine(t) {
+  const p = parentOf(t); if (!p) return '';
+  const kids = childrenOf(p.id), n = kids.filter(x => x.statut === 'fait').length;
+  return `<button type="button" class="oggi-parent" data-action="oggi-open" data-id="${esc(p.id)}" title="Ouvrir la tâche principale">Étape de <b>${esc(p.titre)}</b> · ${n}/${kids.length} étapes faites</button>`;
+}
 function rowHTML(t, k) {
   const fait = !ouverte(t), c = domColor(dom(t.domaine)), quand = k === 'domani' ? 'après-demain' : 'demain';
-  return `<li class="oggi-row${fait ? ' fait' : ''}" style="--c:${c}"><button type="button" class="oggi-check" data-action="oggi-check" data-id="${esc(t.id)}" aria-pressed="${fait}" aria-label="${fait ? 'Rouvrir' : 'Cocher'} : ${esc(t.titre)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button type="button" class="oggi-t" data-action="oggi-open" data-id="${esc(t.id)}">${esc(t.titre)}</button>${fait ? '' : `<button type="button" class="oggi-plus1" data-action="oggi-plus1" data-id="${esc(t.id)}" aria-label="Reporter à ${quand} : ${esc(t.titre)}" title="Reporter à ${quand}">+1</button>`}<button type="button" class="oggi-x" data-action="oggi-retirer" data-id="${esc(t.id)}" aria-label="Retirer de la liste">${ICON.close}</button></li>`;
+  return `<li class="oggi-row${fait ? ' fait' : ''}" style="--c:${c}"><button type="button" class="oggi-check" data-action="oggi-check" data-id="${esc(t.id)}" aria-pressed="${fait}" aria-label="${fait ? 'Rouvrir' : 'Cocher'} : ${esc(t.titre)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><div class="oggi-tw"><button type="button" class="oggi-t" data-action="oggi-open" data-id="${esc(t.id)}">${esc(t.titre)}</button>${parentLine(t)}</div>${fait ? '' : `<button type="button" class="oggi-plus1" data-action="oggi-plus1" data-id="${esc(t.id)}" aria-label="Reporter à ${quand} : ${esc(t.titre)}" title="Reporter à ${quand}">+1</button>`}<button type="button" class="oggi-x" data-action="oggi-retirer" data-id="${esc(t.id)}" aria-label="Retirer de la liste">${ICON.close}</button></li>`;
 }
 function pickRows(k, q) {
   const inList = new Set(liste(k).map(t => t.id)), s = String(q || '').trim().toLowerCase();
   const L = tasks().filter(t => visible(t) && ouverte(t) && !inList.has(t.id) && (!s || String(t.titre).toLowerCase().includes(s)))
     .sort((a, b) => String(dueOf(a) || '9999').localeCompare(String(dueOf(b) || '9999')) || String(a.titre).localeCompare(String(b.titre), 'fr'));
   if (!L.length) return `<p class="muted">${s ? 'Aucune tâche ne correspond.' : 'Toutes tes tâches ouvertes sont déjà dans la liste.'}</p>`;
-  return `<ul class="oggi-list">${L.map(t => { const d = dueOf(t); return `<li><button type="button" class="oggi-pick" data-action="oggi-ajouter" data-id="${esc(t.id)}" style="--c:${domColor(dom(t.domaine))}"><span class="oggi-pt">${esc(t.titre)}</span><small>${esc(dom(t.domaine).nom)}${d ? ' · ' + esc(fShort(d)) : ''}</small></button></li>`; }).join('')}</ul>`;
+  return `<ul class="oggi-list">${L.map(t => { const d = dueOf(t); return `<li><button type="button" class="oggi-pick" data-action="oggi-ajouter" data-id="${esc(t.id)}" style="--c:${domColor(dom(t.domaine))}"><span class="oggi-pt">${esc(t.titre)}</span><small>${esc(dom(t.domaine).nom)}${parentOf(t) ? ' › ' + esc(parentOf(t).titre) : ''}${d ? ' · ' + esc(fShort(d)) : ''}</small></button></li>`; }).join('')}</ul>`;
 }
 
 sheet('oggi', {
