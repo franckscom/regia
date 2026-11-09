@@ -1,5 +1,5 @@
 /* Regia : démarrage, navigation et événements. Chaque onglet vit dans js/tabs/. */
-import { S, rebuild, saveUI } from './core/store.js';
+import { S, rebuild, saveUI, userAct, undo, undoLabel, undoHook, guarded } from './core/store.js';
 import { LocalDB } from './core/db.js';
 import { $, esc, toast, ICON } from './core/util.js';
 import { ymd, fShort, isoWeek } from './core/dates.js';
@@ -81,7 +81,23 @@ function refresh() {
   const def = VIEWS.get(S.view); if (def) def.render();
   renderSync();
   oggiRefresh();
+  renderUndo();
 }
+/* ---- Annuler la dernière action (bouton de l'en-tête, Ctrl+Z / Cmd+Z hors des champs) ---- */
+function renderUndo() {
+  const b = $('#undo-btn'); if (!b) return;
+  const l = undoLabel();
+  b.disabled = !l;
+  b.title = l ? 'Annuler : ' + l : 'Rien à annuler';
+  b.setAttribute('aria-label', l ? 'Annuler : ' + l : 'Rien à annuler');
+}
+async function doUndo() {
+  if (ui.sheet) closeSheet();
+  let l = null;
+  if (await guarded(async () => { l = await undo(); }) && l) { refresh(); toast(l === 'dernière action' ? 'Dernière action annulée' : 'Annulé : ' + l); }
+}
+ACTIONS.set('undo', () => doUndo());
+undoHook.changed = renderUndo;
 let rq = 0;
 function schedule() { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; refresh(); }); }
 hooks.refresh = refresh; hooks.schedule = schedule;
@@ -89,6 +105,7 @@ hooks.refresh = refresh; hooks.schedule = schedule;
 /* ---- Événements ---- */
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-action]'); if (!a) return;
+  if (a.dataset.action !== 'undo') userAct();
   const fn = ACTIONS.get(a.dataset.action); if (!fn) return;
   try { await fn(a, e); } catch (err) { console.warn(err); toast('Action impossible pour le moment.', 'err'); }
 });
@@ -100,6 +117,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  userAct();
   if (t.id === 'import-file') { const f = t.files && t.files[0]; t.value = ''; if (f) importBackup(f); return; }
   const fn = CHANGES.get(t.id) || (t.dataset && t.dataset.change && CHANGES.get('@' + t.dataset.change));
   if (fn) { fn(t); return; }
@@ -107,10 +125,16 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('submit', e => {
   const fn = e.target && SUBMITS.get(e.target.id); if (!fn) return;
+  userAct();
   e.preventDefault(); fn(e.target);
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && ui.sheet) { closeSheet(); return; }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z')) {
+    const t = e.target, champ = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    if (!champ && !ui.sheet) { e.preventDefault(); doUndo(); }
+    return;
+  }
   if (e.key === 'Enter' && e.target && e.target.id === 'f-st-t') { e.preventDefault(); stepAdd(); }
 });
 window.addEventListener('hashchange', () => { closeSheet(); mountView(currentView()); });

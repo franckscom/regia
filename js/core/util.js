@@ -28,8 +28,11 @@ export const ICON = {
 };
 
 let toastT = 0;
+/* Appelé à chaque message (sert à nommer l'action annulable) */
+export const toastHook = { fn: null };
 export function toast(msg, kind) {
   const el = $('#toast'); if (!el) return;
+  if (toastHook.fn) try { toastHook.fn(msg, kind); } catch (e) { }
   el.textContent = msg; el.className = 'toast' + (kind === 'err' ? ' err' : ''); el.hidden = false;
   clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, kind === 'err' ? 5000 : 2600);
 }

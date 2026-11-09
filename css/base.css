@@ -300,3 +300,9 @@ legend.fld-l{padding:0;margin-bottom:5px}
 .demo #sync-btn{display:none}
 .domani-btn{background:var(--d-orange);color:var(--on-accent);font-size:10.5px;letter-spacing:.02em}
 @media (max-width:400px){ .oggi-btn{width:48px;height:48px} .domani-btn{font-size:10px} }
+
+/* Annuler la dernière action (en-tête) */
+.undo-btn{display:inline-flex;align-items:center;justify-content:center;width:auto;gap:6px;padding:0 10px;font-weight:700;font-size:13px;border-color:var(--line)}
+.undo-btn:not(:disabled){color:var(--ink)}
+.undo-btn:disabled{opacity:.35}
+@media (max-width:859px){ .undo-btn{padding:0;width:38px} .undo-l{display:none} }
