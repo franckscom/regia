@@ -38,8 +38,9 @@ export function closeSheet() { ui.sheet = null; $('#sheet-root').innerHTML = '';
 export function renderSheet() {
   const sh = ui.sheet; if (!sh) return;
   const def = SHEETS.get(sh.kind); if (!def) return;
-  const body = $('#sheet-root .sheet-body'), top = body ? body.scrollTop : 0;
-  $('#sheet-root').innerHTML = `<div class="sheet-wrap"><div class="sheet-scrim" data-action="close-sheet"></div><div class="sheet${sh.wide ? ' wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${def.render(sh)}</div></div>`;
+  const body = $('#sheet-root .sheet-body'), top = body ? body.scrollTop : 0, deja = !!$('#sheet-root .sheet');
+  /* Animation d'ouverture seulement à la première apparition, pas à chaque mise à jour du contenu */
+  $('#sheet-root').innerHTML = `<div class="sheet-wrap"><div class="sheet-scrim" data-action="close-sheet"></div><div class="sheet${sh.wide ? ' wide' : ''}${deja ? ' still' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${def.render(sh)}</div></div>`;
   const nb = $('#sheet-root .sheet-body'); if (nb && top) nb.scrollTop = top;
 }
 export function head(t) { return `<header class="sheet-head"><h2 id="sheet-title">${esc(t)}</h2><button type="button" class="icon-btn" data-action="close-sheet" aria-label="Fermer">${ICON.close}</button></header>`; }

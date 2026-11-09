@@ -16,7 +16,7 @@ import './tabs/reunions.js';
 import './tabs/exercices.js';
 import './tabs/candidatures.js';
 import { oggiRefresh } from './tabs/oggi.js';
-import { everyRefresh } from './tabs/everyday.js';
+import { routineRefresh } from './tabs/routine.js';
 import { NAV_ORDER, importBackup } from './tabs/reglages.js';
 
 /* ---- Navigation ---- */
@@ -83,7 +83,7 @@ function refresh() {
   const def = VIEWS.get(S.view); if (def) def.render();
   renderSync();
   oggiRefresh();
-  everyRefresh();
+  routineRefresh();
   renderUndo();
 }
 /* ---- Annuler la dernière action (bouton de l'en-tête, Ctrl+Z / Cmd+Z hors des champs) ---- */

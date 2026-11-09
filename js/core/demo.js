@@ -93,7 +93,7 @@ function donnees() {
     { nom: 'Modèles de messages', desc: 'Exemple de lien', url: 'https://example.com' }] });
   add('reglages', 'comptes', { liste: [{ id: 'li-franck', rythme: 1, pause: false }, { id: 'li-takeoff', rythme: 2, pause: false }] });
 
-  /* Routine EVERYDAY fictive, avec une semaine d'historique */
+  /* ROUTINE fictive : Giorno avec une semaine d'historique, Mese et Anno avec des lignes */
   add('reglages', 'routine', { items: [
     { id: 'r-lecture', titre: '20 minutes de lecture', jours: [1, 2, 3, 4, 5, 6, 7], cree: D(-20) },
     { id: 'r-revue', titre: 'Revue des priorités du jour', jours: [1, 2, 3, 4, 5], cree: D(-20) },
@@ -101,6 +101,12 @@ function donnees() {
     { id: 'r-anglais', titre: 'Business English (exercice du jour)', jours: [1, 2, 3, 4, 5, 6, 7], cree: D(-20) }] });
   for (let i = 1; i <= 7; i++) add('reglages', 'routine-' + D(-i), { jour: D(-i), faits: ['r-lecture', 'r-revue', 'r-sport'].concat(i % 3 ? ['r-anglais'] : []) });
   add('reglages', 'routine-' + t, { jour: t, faits: ['r-lecture'] });
+
+  add('reglages', 'routine-mese', { items: [{ id: 'r-livre', titre: 'Livre', objectif: 1, cree: D(-60) }, { id: 'r-film', titre: 'Film', objectif: 2, cree: D(-60) }, { id: 'r-expo', titre: 'Exposition ou musée', objectif: 1, cree: D(-60) }] });
+  add('reglages', 'routine-anno', { items: [{ id: 'r-livres-an', titre: 'Livres', objectif: 12, cree: D(-60) }, { id: 'r-voyage', titre: 'Voyage', objectif: 1, cree: D(-60) }] });
+  add('reglages', 'rl-r-livre', { lignes: [{ id: 'l1', texte: 'Le Guépard, Giuseppe Tomasi di Lampedusa', fait: D(-3), cree: D(-30) }, { id: 'l2', texte: 'Mythologies, Roland Barthes', fait: null, cree: D(-10) }, { id: 'l0', texte: 'Sémiotique, marketing et communication, Jean-Marie Floch', fait: D(-35), cree: D(-50) }] });
+  add('reglages', 'rl-r-film', { lignes: [{ id: 'l3', texte: 'Il Gattopardo, Visconti', fait: D(-1), cree: D(-1) }] });
+  add('reglages', 'rl-r-voyage', { lignes: [{ id: 'l4', texte: 'Matera, au printemps', fait: null, cree: D(-20) }] });
 
   /* Agenda Google fictif (aujourd'hui et demain) */
   const ev = (d, h1, h2, titre, lieu) => ({ titre, lieu: lieu || '', journee: false, debut: localMs(d, h1), fin: localMs(d, h2) });
