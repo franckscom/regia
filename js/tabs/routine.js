@@ -117,17 +117,43 @@ function carte(t, it, p) {
   const unite = t === 'mese' ? 'par mois' : 'par an';
   let h = `<section class="rl-card${ok ? ' ok' : ''}"><div class="rl-head"><span class="rl-t">${esc(it.titre)}</span><span class="rl-prog${ok ? ' ok' : ''}">${ok ? CHECK : ''}${n} / ${it.objectif}<small> ${unite}</small></span></div>`;
   if (F.length || A.length) h += `<ul class="rl-list">${F.map(l => ligneL(it, l, p)).join('')}${A.length ? `${F.length ? '<li class="rl-sep">À faire</li>' : ''}${A.map(l => ligneL(it, l, p)).join('')}` : ''}</ul>`;
-  h += `<div class="rl-add"><input id="rl-new-${esc(it.id)}" class="rl-new" data-it="${esc(it.id)}" placeholder="${esc(it.titre)} : nom, titre, précision…" aria-label="Nouvelle ligne pour ${esc(it.titre)}" enterkeyhint="done"><button type="button" class="btn btn-sm" data-action="rl-add" data-it="${esc(it.id)}" data-etat="prevu" title="Ajouter à faire">À faire</button><button type="button" class="btn btn-sm btn-primary" data-action="rl-add" data-it="${esc(it.id)}" data-etat="fait" title="Ajouter comme fait">Fait</button></div>`;
+  else h += '<p class="rl-vide">Rien pour l’instant.</p>';
   return h + '</section>';
+}
+/* ---- Nouvelle entrée : d'abord la rubrique (existante, suggérée ou nouvelle), ensuite le texte ---- */
+const SUGGESTIONS = ['Livre', 'Film', 'Concert', 'Événement', 'Exposition', 'Santé', 'Sport', 'Voyage', 'Formation'];
+const AIDE = { livre: 'Titre et auteur', film: 'Titre et réalisateur', concert: 'Artiste, lieu', 'événement': 'Nom, lieu', evenement: 'Nom, lieu', exposition: 'Nom, musée', 'santé': 'Rendez-vous, examen, praticien…', sante: 'Rendez-vous, examen, praticien…', sport: 'Activité, course, séance…', voyage: 'Destination, dates', formation: 'Intitulé, organisme' };
+const norm = x => String(x || '').trim().toLowerCase();
+const aideDe = titre => AIDE[norm(titre)] || AIDE[norm(titre).replace(/s$/, '')] || 'Titre, nom ou précision';
+function ajoutHTML(t, sh) {
+  const a = sh.ajout;
+  if (!a) return `<button type="button" class="btn btn-primary rl-go" data-action="aj-ouvrir">${ICON.plus} Nouvelle entrée</button>`;
+  if (!a.rubrique) {
+    const L = itemsP(t), pris = new Set(L.map(it => norm(it.titre))), sug = SUGGESTIONS.filter(x => !pris.has(norm(x)) && !pris.has(norm(x) + 's'));
+    const chip = (v, lib, cls) => `<button type="button" class="rl-chip${cls ? ' ' + cls : ''}" data-action="aj-rub" data-v="${esc(v)}">${esc(lib)}</button>`;
+    let h = `<div class="rl-aj"><div class="rl-aj-h"><b>Nouvelle entrée : quelle rubrique ?</b><button type="button" class="icon-btn sm" data-action="aj-fermer" aria-label="Annuler">${ICON.close}</button></div>`;
+    if (L.length) h += `<div class="rl-chips">${L.map(it => chip('id:' + it.id, it.titre, 'mine')).join('')}</div>`;
+    if (sug.length) h += `<p class="rl-aj-l">${L.length ? 'Autres rubriques' : 'Rubriques'}</p><div class="rl-chips">${sug.map(x => chip('new:' + x, x)).join('')}</div>`;
+    h += a.creer
+      ? `<div class="rl-add"><input id="aj-nom" value="${esc(a.nom || '')}" placeholder="Nom de la rubrique (ex. Podcast)" aria-label="Nom de la nouvelle rubrique" enterkeyhint="next" data-autofocus><button type="button" class="btn btn-sm btn-primary" data-action="aj-nom">Continuer</button></div>`
+      : `<button type="button" class="rl-chip add" data-action="aj-creer">${ICON.plus} Nouvelle rubrique</button>`;
+    return h + '</div>';
+  }
+  const r = a.rubrique, nomR = r.id ? (itemsP(t).find(x => x.id === r.id) || {}).titre || r.titre : r.titre, p = periode(t, sh.off || 0);
+  return `<div class="rl-aj"><div class="rl-aj-h"><b>${esc(nomR)}</b>${r.id ? '' : `<span class="rl-tag">nouvelle rubrique, objectif 1 ${t === 'mese' ? 'par mois' : 'par an'}</span>`}<button type="button" class="linkbtn" data-action="aj-changer">Changer</button><span class="spacer"></span><button type="button" class="icon-btn sm" data-action="aj-fermer" aria-label="Annuler">${ICON.close}</button></div>
+    <input id="aj-texte" class="rl-new" value="${esc(a.texte || '')}" placeholder="${esc(aideDe(nomR))}" aria-label="Texte de l’entrée" enterkeyhint="done" data-autofocus>
+    <div class="rl-aj-b"><button type="button" class="btn btn-sm" data-action="aj-valider" data-etat="prevu">À faire</button><button type="button" class="btn btn-sm btn-primary" data-action="aj-valider" data-etat="fait">Fait${p.courante ? '' : ' en ' + esc(p.lib)}</button></div>
+    <p class="hint">« À faire » la garde en attente jusqu’à ce que tu la coches ; « Fait » la compte ${p.courante ? 'dès aujourd’hui' : 'pour ' + esc(p.lib)}.</p></div>`;
 }
 function corpsP(t, sh) {
   const L = itemsP(t), nom = NOM[t];
-  if (!L.length) return `<div class="empty"><p class="empty-t">Rien dans ${nom}</p><p>${t === 'mese' ? 'Ajoute ce que tu veux faire chaque mois, avec un objectif (ex. Livre : 1 par mois).' : 'Ajoute ce que tu veux faire chaque année, avec un objectif (ex. Livres : 12 par an).'} Pour chaque élément, tu notes ensuite des lignes (titre et auteur, ou toute précision), prévues ou faites.</p></div><button type="button" class="btn btn-primary" data-action="ev-edit">${ICON.plus} Créer ${nom}</button>`;
+  if (!L.length) return `<div class="empty"><p class="empty-t">Rien dans ${nom}</p><p>Ajoute une première entrée : choisis la rubrique (livre, concert, santé…), puis écris ce qu’il faut retenir. L’objectif de chaque rubrique se règle ensuite dans « Modifier ${nom} ».</p></div>${ajoutHTML(t, sh)}`;
   const p = periode(t, sh.off || 0), n = L.filter(it => lignes(it.id).filter(l => dansP(l, p)).length >= it.objectif).length;
   let h = `<div class="rl-nav"><button type="button" class="icon-btn sm" data-action="rl-per" data-d="-1" aria-label="Période précédente">${ICON.left}</button><span class="rl-per">${esc(p.lib)}</span><button type="button" class="icon-btn sm" data-action="rl-per" data-d="1" aria-label="Période suivante"${p.courante ? ' disabled' : ''}>${ICON.right}</button>${p.courante ? '' : '<button type="button" class="linkbtn" data-action="rl-per" data-d="0">Revenir à aujourd’hui</button>'}</div>`;
   h += `<p class="oggi-sum">${n === L.length ? `Objectifs atteints : ${n} sur ${L.length}. Bravo !` : `${n} objectif${n > 1 ? 's' : ''} atteint${n > 1 ? 's' : ''} sur ${L.length}`}</p>`;
+  h += ajoutHTML(t, sh);
   h += L.map(it => carte(t, it, p)).join('');
-  h += `<p class="hint">« À faire » note une ligne prévue (elle reste d’une période à l’autre jusqu’à ce que tu la coches) ; « Fait » l’ajoute comme faite${p.courante ? ' aujourd’hui' : ' pour ' + esc(p.lib)}. Touche le texte d’une ligne pour le corriger.</p>`;
+  h += '<p class="hint">Coche une ligne quand c’est fait ; touche son texte pour le corriger.</p>';
   return h + `<button type="button" class="btn" data-action="ev-edit">Modifier ${nom}</button>`;
 }
 function editP(t, sh) {
@@ -155,6 +181,8 @@ sheet('routine', {
     return head('Routine') + `<div class="sheet-body">${onglets(t)}${t === 'giorno' ? corpsG() : corpsP(t, sh)}</div>`;
   },
   field(sh, t) {
+    if (sh.ajout && t.id === 'aj-texte') { sh.ajout.texte = t.value; return; }
+    if (sh.ajout && t.id === 'aj-nom') { sh.ajout.nom = t.value; return; }
     if (!sh.edit) return;
     if (t.id === 'ev-new') { sh.nouveau = t.value; return; }
     if (t.dataset.evI != null) { const it = sh.items[Number(t.dataset.evI)]; if (it) it.titre = t.value; }
@@ -167,7 +195,7 @@ function ouvrir(tab) { S.ui.rtTab = tab; openSheet({ kind: 'routine', tab, off: 
 /* ---- Actions communes ---- */
 action('routine', a => ouvrir(a.dataset.tab || S.ui.rtTab || 'giorno'));
 const enHaut = () => { const b = $('#sheet-root .sheet-body'); if (b) b.scrollTop = 0; };
-action('rt-tab', a => { const sh = cur(); if (!sh) return; sh.tab = a.dataset.value; sh.off = 0; sh.editL = null; S.ui.rtTab = sh.tab; renderSheet(); enHaut(); });
+action('rt-tab', a => { const sh = cur(); if (!sh) return; sh.tab = a.dataset.value; sh.off = 0; sh.editL = null; sh.ajout = null; S.ui.rtTab = sh.tab; renderSheet(); enHaut(); });
 action('ev-edit', () => { const sh = cur(); if (!sh) return; sh.edit = true; sh.nouveau = ''; sh.items = clone(sh.tab === 'giorno' ? itemsG() : itemsP(sh.tab)); renderSheet(); });
 action('ev-back', () => { const sh = cur(); if (!sh) return; sh.edit = false; renderSheet(); });
 function addFromInput() {
@@ -206,15 +234,40 @@ action('rl-per', a => { const sh = cur(); if (!sh) return; const d = Number(a.da
 /* Jour noté quand on coche : aujourd'hui, ou le premier jour de la période affichée si elle est passée */
 const jourFait = sh => { const p = periode(sh.tab, sh.off || 0); return p.courante ? S.today : p.debut; };
 const titreP = (t, id) => { const it = itemsP(t).find(x => x.id === id); return it ? it.titre : 'élément'; };
-async function ajouterLigne(itId, etat) {
-  const sh = cur(); if (!sh) return;
-  const f = $('#rl-new-' + itId), texte = f ? f.value.trim() : '';
-  if (etat === 'prevu' && !texte) { if (f) f.focus(); toast('Écris d’abord ce qui est prévu.'); return; }
-  const L = lignes(itId); L.push({ id: newId('l'), texte, fait: etat === 'fait' ? jourFait(sh) : null, cree: S.today });
-  await saveLignes(itId, L);
-  toast((etat === 'fait' ? 'Fait : ' : 'À faire : ') + titreP(sh.tab, itId) + (texte ? ', ' + texte : ''));
+const focusSur = id => setTimeout(() => { const f = $('#' + id); if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }, 30);
+action('aj-ouvrir', () => { const sh = cur(); if (!sh) return; sh.ajout = { rubrique: null, texte: '' }; renderSheet(); });
+action('aj-fermer', () => { const sh = cur(); if (!sh) return; sh.ajout = null; renderSheet(); });
+action('aj-changer', () => { const sh = cur(); if (!sh || !sh.ajout) return; sh.ajout.rubrique = null; renderSheet(); });
+action('aj-creer', () => { const sh = cur(); if (!sh || !sh.ajout) return; sh.ajout.creer = true; renderSheet(); focusSur('aj-nom'); });
+function choisir(v) {
+  const sh = cur(); if (!sh || !sh.ajout) return;
+  if (v.startsWith('id:')) sh.ajout.rubrique = { id: v.slice(3) };
+  else {
+    const titre = v.replace(/^new:/, '').trim(); if (!titre) return;
+    const ex = itemsP(sh.tab).find(it => norm(it.titre) === norm(titre));
+    sh.ajout.rubrique = ex ? { id: ex.id } : { id: null, titre };
+  }
+  sh.ajout.creer = false; renderSheet(); focusSur('aj-texte');
 }
-action('rl-add', a => guarded(() => ajouterLigne(a.dataset.it, a.dataset.etat)));
+action('aj-rub', a => choisir(a.dataset.v));
+function nomSaisi() { const f = $('#aj-nom'), v = f ? f.value.trim() : ''; if (!v) { if (f) f.focus(); toast('Donne un nom à la rubrique.'); return; } choisir('new:' + v); }
+action('aj-nom', () => nomSaisi());
+/* Enregistre l'entrée ; une rubrique nouvelle est créée en même temps (objectif 1, à régler dans « Modifier ») */
+async function valider(etat) {
+  const sh = cur(), a = sh && sh.ajout; if (!a || !a.rubrique) return;
+  const f = $('#aj-texte'), texte = f ? f.value.trim() : String(a.texte || '').trim();
+  if (etat === 'prevu' && !texte) { if (f) f.focus(); toast('Écris d’abord ce qui est prévu.'); return; }
+  let itId = a.rubrique.id, titre = a.rubrique.titre;
+  if (!itId) {
+    const L = itemsP(sh.tab); itId = newId('r');
+    await put('reglages', CLE_ITEMS[sh.tab], { items: L.concat([{ id: itId, titre, objectif: 1, cree: S.today }]) });
+  } else titre = titreP(sh.tab, itId);
+  const Ls = lignes(itId); Ls.push({ id: newId('l'), texte, fait: etat === 'fait' ? jourFait(sh) : null, cree: S.today });
+  await saveLignes(itId, Ls);
+  sh.ajout = null; renderSheet();
+  toast((etat === 'fait' ? 'Fait : ' : 'À faire : ') + titre + (texte ? ', ' + texte : ''));
+}
+action('aj-valider', a => guarded(() => valider(a.dataset.etat)));
 action('rl-ck', a => guarded(async () => {
   const sh = cur(); if (!sh) return;
   const L = lignes(a.dataset.it), l = L.find(x => x.id === a.dataset.l); if (!l) return;
@@ -234,11 +287,12 @@ onChange('@rl-txt', el => guarded(async () => {
   if (!l || l.texte === el.value.trim()) { renderSheet(); return; }
   l.texte = el.value.trim(); await saveLignes(el.dataset.it, L); toast('Ligne corrigée');
 }));
-/* Entrée : ajoute (nouvel élément en édition ; nouvelle ligne, comme prévue) */
+/* Entrée : ajoute (nouvel élément en édition ; nom de rubrique ; texte d'une entrée, comme « À faire ») */
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target) return;
   if (e.target.id === 'ev-new') { e.preventDefault(); addFromInput(); }
-  else if (e.target.classList && e.target.classList.contains('rl-new')) { e.preventDefault(); guarded(() => ajouterLigne(e.target.dataset.it, 'prevu')); }
+  else if (e.target.id === 'aj-texte') { e.preventDefault(); guarded(() => valider('prevu')); }
+  else if (e.target.id === 'aj-nom') { e.preventDefault(); nomSaisi(); }
   else if (e.target.classList && e.target.classList.contains('rl-in')) { e.preventDefault(); e.target.blur(); }
 });
 

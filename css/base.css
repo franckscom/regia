@@ -395,3 +395,21 @@ legend.fld-l{padding:0;margin-bottom:5px}
 .rl-txt:hover{border-color:var(--line)}
 .rl-txt.vide{color:var(--ink-3);font-style:italic}
 .rl-row.fait .rl-txt{color:var(--ink)}
+/* Nouvelle entrée (Mese, Anno) : rubrique puis texte */
+.rl-go{justify-self:start}
+.rl-aj{display:grid;gap:10px;padding:12px;border:1.5px solid var(--accent);border-radius:var(--r);background:var(--surface)}
+.rl-aj-h{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.rl-aj-h b{font-size:16px}
+.rl-aj-h .spacer{flex:1}
+.rl-aj-h .icon-btn{margin-left:auto}
+.rl-aj-l{margin:2px 0 -4px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.rl-chips{display:flex;flex-wrap:wrap;gap:8px}
+.rl-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border:1.5px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);font:600 15px/1 var(--f-body);cursor:pointer}
+.rl-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rl-chip.mine{border-color:var(--ok)}
+.rl-chip.add{justify-self:start;border-style:dashed;color:var(--ink-2)}
+.rl-chip svg{width:15px;height:15px}
+.rl-tag{font-size:12px;color:var(--ink-3)}
+.rl-aj .rl-new{width:100%;border-style:solid}
+.rl-aj-b{display:flex;gap:8px;justify-content:flex-end}
+.rl-vide{margin:0;font-size:13.5px;color:var(--ink-3)}
