@@ -93,6 +93,15 @@ function donnees() {
     { nom: 'Modèles de messages', desc: 'Exemple de lien', url: 'https://example.com' }] });
   add('reglages', 'comptes', { liste: [{ id: 'li-franck', rythme: 1, pause: false }, { id: 'li-takeoff', rythme: 2, pause: false }] });
 
+  /* Routine EVERYDAY fictive, avec une semaine d'historique */
+  add('reglages', 'routine', { items: [
+    { id: 'r-lecture', titre: '20 minutes de lecture', jours: [1, 2, 3, 4, 5, 6, 7], cree: D(-20) },
+    { id: 'r-revue', titre: 'Revue des priorités du jour', jours: [1, 2, 3, 4, 5], cree: D(-20) },
+    { id: 'r-sport', titre: 'Sport', jours: [1, 3, 5], cree: D(-20) },
+    { id: 'r-anglais', titre: 'Business English (exercice du jour)', jours: [1, 2, 3, 4, 5, 6, 7], cree: D(-20) }] });
+  for (let i = 1; i <= 7; i++) add('reglages', 'routine-' + D(-i), { jour: D(-i), faits: ['r-lecture', 'r-revue', 'r-sport'].concat(i % 3 ? ['r-anglais'] : []) });
+  add('reglages', 'routine-' + t, { jour: t, faits: ['r-lecture'] });
+
   /* Agenda Google fictif (aujourd'hui et demain) */
   const ev = (d, h1, h2, titre, lieu) => ({ titre, lieu: lieu || '', journee: false, debut: localMs(d, h1), fin: localMs(d, h2) });
   const agenda = { maj: Date.now(), evenements: [ev(t, '09:00', '10:30', 'Cours de stratégie de marque', 'Amphi B'), ev(t, '15:00', '15:30', 'Appel découverte avec une PME', 'Visio'), ev(D(1), '11:00', '12:00', 'Réunion de l’association')] };

@@ -2,7 +2,7 @@
 import { S, rebuild, saveUI, userAct, undo, undoLabel, undoHook, guarded } from './core/store.js';
 import { LocalDB } from './core/db.js';
 import { $, esc, toast, ICON } from './core/util.js';
-import { ymd, fShort, isoWeek } from './core/dates.js';
+import { ymd, fShort, fDayM, F_WD, parseD, isoWeek } from './core/dates.js';
 import { VIEWS, ACTIONS, INPUTS, CHANGES, SUBMITS, hooks, ui, sheet, head, openSheet, closeSheet, onSheetField, masques } from './core/ui.js';
 import { renderSync, agendaCache } from './core/sync.js';
 import { DEMO } from './core/config.js';
@@ -16,6 +16,7 @@ import './tabs/reunions.js';
 import './tabs/exercices.js';
 import './tabs/candidatures.js';
 import { oggiRefresh } from './tabs/oggi.js';
+import { everyRefresh } from './tabs/everyday.js';
 import { NAV_ORDER, importBackup } from './tabs/reglages.js';
 
 /* ---- Navigation ---- */
@@ -77,10 +78,12 @@ function mountView(v) {
 function refresh() {
   renderNav();
   if (S.view !== 'reglages' && masques().includes(S.view)) { location.hash = '#aujourdhui'; return; }
-  const pill = $('#today-pill'); if (pill) pill.innerHTML = ICON.cal + '<span>' + esc(fShort(S.today) + ' · S' + isoWeek(S.today)) + '</span>';
+  /* Sur téléphone, le jour de la semaine et l'icône disparaissent pour laisser la place aux boutons */
+  const pill = $('#today-pill'); if (pill) pill.innerHTML = ICON.cal + `<span><span class="tp-wd">${esc(F_WD.format(parseD(S.today)))} </span>${esc(fDayM(S.today))}<span class="tp-wk"> · S${isoWeek(S.today)}</span></span>`;
   const def = VIEWS.get(S.view); if (def) def.render();
   renderSync();
   oggiRefresh();
+  everyRefresh();
   renderUndo();
 }
 /* ---- Annuler la dernière action (bouton de l'en-tête, Ctrl+Z / Cmd+Z hors des champs) ---- */
