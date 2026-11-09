@@ -3,7 +3,7 @@ import { S, saveUI } from '../core/store.js';
 import { $, esc } from '../core/util.js';
 import { isDate, addDays, diff, mondayOf, isoWeek, parseD, fShort, F_MONTH, F_WD } from '../core/dates.js';
 import { view, action, gate, empty, refresh } from '../core/ui.js';
-import { tasks, domList, dom, domColor, childrenOf, parentOf, isTop, dueOf, byDue, visible } from './taches.js';
+import { tasks, domList, dom, domColor, childrenOf, parentOf, isTop, dueOf, byDue, visible, prioBadge } from './taches.js';
 
 const ZOOMS = { '4sem': { l: '4 sem.', w: 30, span: 28 }, '3mois': { l: '3 mois', w: 12, span: 91 }, '6mois': { l: '6 mois', w: 6, span: 182 } };
 
@@ -70,7 +70,7 @@ function agRow(t, tbc) {
   const d = dueOf(t), n = d ? diff(S.today, d) : null, dd = dom(t.domaine), p = parentOf(t), done = t.statut === 'fait';
   const jl = tbc ? '?' : (done ? 'fait' : (n < 0 ? 'retard ' + (-n) + ' j' : (n === 0 ? 'Jour J' : 'J-' + n)));
   const date = tbc ? '<div class="ag-date"><b>?</b></div>' : `<div class="ag-date"><b>${parseD(d).getDate()}</b><span>${esc(F_WD.format(parseD(d)))}</span><span class="wk">S${isoWeek(d)}</span></div>`;
-  return `<div class="ag-row${n === 0 ? ' is-today' : ''}${(n !== null && n < 0 && !done) ? ' is-late' : ''}${done ? ' is-done' : ''}">${date}<button type="button" class="ag-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal">◆</span> ' : ''}${esc(t.titre)}</span><span class="row-meta"><span class="dom" style="--c:${domColor(dd)}">${esc(dd.nom)}</span>${p ? `<span>› ${esc(p.titre)}</span>` : ''}</span></button><span class="ag-j">${jl}</span></div>`;
+  return `<div class="ag-row${n === 0 ? ' is-today' : ''}${(n !== null && n < 0 && !done) ? ' is-late' : ''}${done ? ' is-done' : ''}">${date}<button type="button" class="ag-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal">◆</span> ' : ''}${esc(t.titre)}</span><span class="row-meta">${done ? '' : prioBadge(t)}<span class="dom" style="--c:${domColor(dd)}">${esc(dd.nom)}</span>${p ? `<span>› ${esc(p.titre)}</span>` : ''}</span></button><span class="ag-j">${jl}</span></div>`;
 }
 function agendaHTML() {
   const t0 = S.today;

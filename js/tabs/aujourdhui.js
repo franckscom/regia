@@ -61,6 +61,15 @@ function agendaHTML() {
   if (pend.length) h += pend.map(p => `<div class="evrow pend"><span class="evt">${p.journee ? 'Journée' : esc(p.heure || '')}</span><span class="evn">${esc(p.titre)}<small>${p.etat === 'erreur' ? 'Erreur Google Agenda : ' + esc(p.erreur || '') : esc(fShort(p.date)) + ' · envoi à la prochaine synchro'}</small></span>${p.etat === 'erreur' ? `<button type="button" class="btn btn-sm" data-action="ag-retry" data-id="${esc(p.id)}">Réessayer</button>` : ''}</div>`).join('');
   return section('agenda', 'Agenda', a ? '' : pend.length, `<div class="evs">${h}</div>${a ? `<p class="hint">Google Agenda, mis à jour ${esc(fAgo(a.maj || LocalDB.meta.lastSync || Date.now()))}.</p>` : ''}<p class="hint"><a href="${esc(calLink(a, t0))}" target="_blank" rel="noopener">Ouvrir Google Agenda</a></p>`);
 }
+/* Les 7 prochains jours, regroupés par jour ; dans un jour : priorité, puis la dernière programmée en haut */
+function parJour(L) {
+  const by = new Map();
+  for (const t of L) { const d = dueOf(t); if (!by.has(d)) by.set(d, []); by.get(d).push(t); }
+  return [...by.keys()].sort().map(d => {
+    const n = diff(S.today, d);
+    return `<h3 class="dayh"><span>${n === 1 ? 'Demain · ' : ''}${esc(cap(F_LONG.format(parseD(d))))}</span>${n > 1 ? `<span class="cnt">J-${n}</span>` : ''}</h3>${by.get(d).sort(byDue).map(t => taskRow(t, { noDue: true })).join('')}`;
+  }).join('');
+}
 function renderToday() {
   const el = $('#v-today');
   if (!gate(el)) return;
@@ -77,18 +86,18 @@ function renderToday() {
   const cours = open.filter(t => t.statut === 'en_cours' && !shownIds.has(t.id)).sort(byDue);
   const plan = T.filter(t => t.statut === 'a_faire' && !dueOf(t) && !(t.parentId && S.data.taches.has(t.parentId) && !dueOf(parentOf(t)))).sort(byDue);
   const recent = T.filter(t => t.statut === 'fait' && isDate(t.faitLe) && diff(t.faitLe, t0) <= 2).sort((a, b) => a.faitLe < b.faitLe ? 1 : -1);
-  const rows = L => L.map(t => taskRow(t)).join('');
+  const rows = (L, o) => L.map(t => taskRow(t, o)).join('');
   let h = '';
   if (late.length) h += section('late', 'En retard', late.length, rows(late), { cls: 'sec-late' });
   h += ag;
-  h += section('today', 'Aujourd’hui', tod.length, tod.length ? rows(tod) : `<p class="empty-line">${late.length ? 'Rien d’autre de prévu aujourd’hui.' : 'Rien de prévu aujourd’hui.'}</p>`);
+  h += section('today', 'Aujourd’hui', tod.length, tod.length ? rows(tod, { noDue: true }) : `<p class="empty-line">${late.length ? 'Rien d’autre de prévu aujourd’hui.' : 'Rien de prévu aujourd’hui.'}</p>`);
   if (tabOn('contenus')) {
     const s = semaineContenus(), C = s.retard.concat(s.aPublier);
     if (C.length) h += section('cont7', 'Contenus à publier', C.length, C.map(x => contRow(x)).join(''), { link: '#contenus', linkLabel: 'Calendrier' });
   }
   const R = reunions().filter(r => isDate(r.date) && r.date >= t0 && r.date <= w).sort(byReu);
   if (R.length) h += section('reu7', 'Réunions des 7 prochains jours', R.length, R.map(r => reuRow(r, { noSel: true })).join(''));
-  h += section('week', 'Les 7 prochains jours', week.length, week.length ? rows(week) : '<p class="empty-line">Rien d’autre de daté cette semaine.</p>');
+  h += section('week', 'Les 7 prochains jours', week.length, week.length ? parJour(week) : '<p class="empty-line">Rien d’autre de daté cette semaine.</p>');
   if (att.length) h += section('att', 'En attente d’un retour', att.length, rows(att));
   if (cours.length) h += section('cours', 'En cours', cours.length, rows(cours));
   if (plan.length) h += section('planifier', 'À planifier', plan.length, rows(plan), { collapsible: true });
@@ -117,7 +126,7 @@ onSubmit('qa-form', async () => {
   const ti = $('#qa-titre'), titre = ti.value.trim(); if (!titre) { ti.focus(); return; }
   const domaine = $('#qa-dom').value, date = $('#qa-date').value || null, modele = ($('#qa-mod') || {}).value || '';
   const ok = await guarded(() => createTask(Object.assign({ titre, domaine, echeance: date }, modele ? { _modele: modele } : {})));
-  if (ok) { ti.value = ''; $('#qa-date').value = ''; fillModSelect(); S.ui.lastDom = domaine; saveUI(); toast(date ? 'Ajoutée pour le ' + fShort(date) : 'Ajoutée dans « À planifier »'); }
+  if (ok) { ti.value = ''; $('#qa-date').value = ''; fillModSelect(); S.ui.lastDom = domaine; saveUI(); toast(!date ? 'Ajoutée dans « À planifier »' : date === S.today ? 'Ajoutée dans OGGI' : date === addDays(S.today, 1) ? 'Ajoutée dans DOMANI' : 'Ajoutée pour le ' + fShort(date)); }
 });
 action('goto', a => { if (a.dataset.mode && a.dataset.view === 'contenus') { S.ui.contMode = a.dataset.mode; saveUI(); } if (location.hash === '#' + a.dataset.view) refresh(); else location.hash = '#' + a.dataset.view; });
 action('ag-retry', a => guarded(async () => { await patch('agenda', a.dataset.id, { etat: 'a_creer', erreur: null }); toast('Nouvel essai à la prochaine synchro'); }));

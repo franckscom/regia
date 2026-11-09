@@ -192,7 +192,11 @@ input:disabled{opacity:.45}
 .st-cours{color:var(--accent)}
 .st-att{color:var(--warn)}
 .mini{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
-.prio{font-family:var(--f-mono);font-weight:600;font-size:12px;color:var(--danger);border:1.5px solid var(--danger);border-radius:3px;width:20px;height:20px;display:grid;place-items:center;margin-top:1px}
+/* Priorité : pastille pleine pour « haute », discrète pour « basse », rien pour « normale » */
+.pb{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;line-height:1.5;padding:0 6px 0 4px;border-radius:3px;white-space:nowrap}
+.pb svg{width:11px;height:11px;flex:none}
+.pb-haute{background:var(--danger);color:var(--on-danger)}
+.pb-basse{box-shadow:inset 0 0 0 1px var(--line);color:var(--ink-2)}
 .jal{font-size:.8em;vertical-align:1px}
 .kids{margin-left:30px;border-left:2px solid var(--line);padding-left:10px}
 .kids .row{padding:8px 0}
@@ -253,14 +257,24 @@ legend.fld-l{padding:0;margin-bottom:5px}
 .oggi-btn:active{transform:scale(.95)}
 .oggi-n{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--mark);color:var(--on-mark);font-size:11px;line-height:20px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
 .oggi-sum{margin:0;font-weight:700;color:var(--ink-2)}
+.sum-late{color:var(--danger)}
+/* Groupes par priorité */
+.oggi-g{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+.oggi-g svg{width:13px;height:13px;flex:none}
+.oggi-g.g-haute{color:var(--danger)}
+.oggi-g.g-basse{color:var(--ink-3)}
+.oggi-g.g-fait{color:var(--ok)}
 .oggi-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .oggi-row{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 10px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:var(--r)}
+.oggi-row.p-haute{background:color-mix(in srgb,var(--danger) 7%,var(--surface));border-top-color:color-mix(in srgb,var(--danger) 40%,var(--line));border-right-color:color-mix(in srgb,var(--danger) 40%,var(--line));border-bottom-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
+.oggi-row.p-basse .oggi-t{font-weight:500;color:var(--ink-2)}
 .oggi-check{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--c);background:none;color:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
 .oggi-check svg{width:18px;height:18px}
 .oggi-check[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
-.oggi-tw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
-.oggi-t{width:100%;min-width:0;background:none;border:0;padding:8px 0;text-align:left;font:inherit;font-size:17px;font-weight:600;color:var(--ink);cursor:pointer}
-.oggi-parent{background:none;border:0;padding:0 0 8px;margin-top:-4px;text-align:left;font:inherit;font-size:13px;line-height:1.3;color:var(--ink-2);cursor:pointer}
+.oggi-tw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:4px 0}
+.oggi-t{width:100%;min-width:0;background:none;border:0;padding:4px 0;text-align:left;font:inherit;font-size:17px;font-weight:600;line-height:1.35;color:var(--ink);cursor:pointer;overflow-wrap:anywhere}
+.oggi-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 4px}
+.oggi-parent{background:none;border:0;padding:0 0 4px;text-align:left;font:inherit;font-size:13px;line-height:1.3;color:var(--ink-2);cursor:pointer}
 .oggi-parent b{font-weight:600;color:var(--ink)}
 .oggi-parent:hover b,.oggi-parent:focus-visible b{text-decoration:underline}
 .oggi-row.fait .oggi-t{text-decoration:line-through;color:var(--ink-2);font-weight:400}
@@ -268,7 +282,8 @@ legend.fld-l{padding:0;margin-bottom:5px}
 .oggi-x svg{width:16px;height:16px}
 .oggi-pick{width:100%;display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:var(--r);background:none;color:var(--ink);cursor:pointer}
 .oggi-pt{font-weight:600;font-size:16px}
-.oggi-pick small{color:var(--ink-2);font-size:13px}
+.oggi-pick small{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;color:var(--ink-2);font-size:13px}
+.oggi-help b{font-family:var(--f-mono);color:var(--ink-2)}
 #oggi-q{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink)}
 .oggi-plus1{flex:none;height:34px;min-width:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);font-family:var(--f-mono);font-weight:600;font-size:14px;cursor:pointer}
 .oggi-plus1:active{background:var(--surface-2)}

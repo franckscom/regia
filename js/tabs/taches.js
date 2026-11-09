@@ -20,8 +20,48 @@ export function dueOf(t) {
   return (!t.aConfirmer && isDate(t.echeance)) ? t.echeance : null;
 }
 export function visible(t) { const d = S.data.domaines.get(t.domaine); return !(d && d.archive); }
-function prioRank(t) { return t.priorite === 'haute' ? 0 : (t.priorite === 'basse' ? 2 : 1); }
-export function byDue(a, b) { const x = dueOf(a), y = dueOf(b); if (x !== y) { if (!x) return 1; if (!y) return -1; return x < y ? -1 : 1; } return (prioRank(a) - prioRank(b)) || String(a.titre).localeCompare(String(b.titre), 'fr'); }
+
+/* ---- Priorité ---- */
+/* Celle de la tâche ; une étape de rétroplanning restée « normale » prend celle de sa tâche principale. */
+export function prioOf(t) {
+  if (!t) return 'normale';
+  const own = t.priorite || 'normale'; if (own !== 'normale') return own;
+  const p = parentOf(t); return (p && p.priorite) || 'normale';
+}
+export function prioRank(t, own) { const p = own ? (t.priorite || 'normale') : prioOf(t); return p === 'haute' ? 0 : (p === 'basse' ? 2 : 1); }
+const PRIO_SVG = {
+  haute: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10.5V2M2.5 5.5L6 2l3.5 3.5"/></svg>',
+  basse: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 1.5V10M2.5 6.5L6 10l3.5-3.5"/></svg>'
+};
+export function prioIcon(p) { return PRIO_SVG[p] || ''; }
+/* Pastille « Priorité haute » ou « Priorité basse » (rien pour « normale »). own : ignorer la priorité héritée. */
+export function prioBadge(t, own) {
+  const p = own ? (t.priorite || 'normale') : prioOf(t);
+  return PRIO_SVG[p] ? `<span class="pb pb-${p}">${PRIO_SVG[p]}Priorité ${p}</span>` : '';
+}
+
+/* ---- Ordre d'insertion ----
+   planifieMs : moment (ms) où la tâche a reçu sa date ; enregistré à la création et à chaque changement de date.
+   Tâches plus anciennes : heure de création lue dans l'identifiant (t-<horodatage>…, t-claude-AAAAMMJJHHMM-xx), sinon creeLe. */
+const ID_MIN = new Date(2026, 0, 1).getTime();
+function idMs(id) {
+  const s = String(id || '');
+  let m = /^[a-z]+-([0-9a-z]{8})[0-9a-z]{0,4}$/.exec(s);
+  if (m) { const n = parseInt(m[1], 36); if (n >= ID_MIN && n <= Date.now() + 864e5) return n; }
+  m = /-claude-(\d{4})(\d{2})(\d{2})-?(\d{2})(\d{2})(?!\d)/.exec(s);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0;
+}
+function jourMs(s) { const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(s || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)).getTime() : 0; }
+/* Une étape calée sur sa tâche principale est reprogrammée en même temps qu'elle. */
+export function planifMs(t) {
+  if (!t) return 0;
+  const own = Number(t.planifieMs) || idMs(t.id) || jourMs(t.creeLe);
+  if (t.parentId && typeof t.offset === 'number') { const p = parentOf(t); if (p) return Math.max(own, Number(p.planifieMs) || 0); }
+  return own;
+}
+/* Tâches d'un même jour : priorité (haute, normale, basse), puis la dernière programmée en haut. */
+export function byPrio(a, b) { return (prioRank(a) - prioRank(b)) || (planifMs(b) - planifMs(a)) || String(a.titre).localeCompare(String(b.titre), 'fr'); }
+export function byDue(a, b) { const x = dueOf(a), y = dueOf(b); if (x !== y) { if (!x) return 1; if (!y) return -1; return x < y ? -1 : 1; } return byPrio(a, b); }
 export function jTxt(o) { o = Number(o) || 0; return o < 0 ? 'J-' + (-o) : (o > 0 ? 'J+' + o : 'Jour J'); }
 
 /* ---- Lignes ---- */
@@ -38,20 +78,22 @@ export function dueBits(t) {
   }
   return j + `<span class="date">${esc(fShort(d))}</span>`;
 }
+/* o.noDom : sans le domaine ; o.noParent : sous sa tâche principale (priorité propre seulement) ; o.noDue : la section donne déjà le jour */
 export function taskRow(t, o) {
   o = o || {};
   const d = dom(t.domaine), p = parentOf(t), kids = childrenOf(t.id);
   const done = t.statut === 'fait', due = dueOf(t), late = !done && due && due < S.today;
   const meta = [];
+  const pb = done ? '' : prioBadge(t, !!o.noParent); if (pb) meta.push(pb);
   if (!o.noDom) meta.push(`<span class="dom" style="--c:${domColor(d)}">${esc(d.nom)}</span>`);
   if (p && !o.noParent) meta.push(`<span>› ${esc(p.titre)}</span>`);
   if (t.statut === 'en_cours') meta.push('<span class="st st-cours">en cours</span>');
   if (t.statut === 'attente') meta.push('<span class="st st-att">en attente</span>');
-  const db = dueBits(t); if (db) meta.push(`<span class="due">${db}</span>`);
+  const db = o.noDue ? '' : dueBits(t); if (db) meta.push(`<span class="due">${db}</span>`);
   if (kids.length) meta.push(`<span class="mini">${kids.filter(k => k.statut === 'fait').length}/${kids.length} étapes</span>`);
   if (t.recurrence && t.recurrence !== 'aucune') meta.push(`<span class="mini">↻ ${t.recurrence === 'hebdo' ? 'chaque semaine' : 'chaque mois'}</span>`);
   if (t.notes) meta.push(`<span class="mini">${textLinks(t.notes).length ? 'notes et liens' : 'notes'}</span>`);
-  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}"><button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button><button type="button" class="row-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button><span class="row-end">${(t.priorite === 'haute' && !done) ? '<span class="prio" title="Priorité haute" aria-label="Priorité haute">!</span>' : ''}${done ? '' : `<label class="resched" title="Reprogrammer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg><input type="date" class="resched-in" data-action="resched-pick" data-change="resched" data-id="${esc(t.id)}" value="${esc(due || '')}" aria-label="Reprogrammer : ${esc(t.titre)}"></label>`}</span></div>`;
+  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}"><button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button><button type="button" class="row-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button><span class="row-end">${done ? '' : `<label class="resched" title="Reprogrammer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg><input type="date" class="resched-in" data-action="resched-pick" data-change="resched" data-id="${esc(t.id)}" value="${esc(due || '')}" aria-label="Reprogrammer : ${esc(t.titre)}"></label>`}</span></div>`;
 }
 export function fillDomSelect(sel) {
   if (!sel) return;
@@ -77,7 +119,7 @@ export async function toggleTask(id) {
     const step = d => t.recurrence === 'hebdo' ? addDays(d, 7) : addMonths(d, 1);
     let next = step(base); let guard = 0; while (next <= S.today && guard++ < 500) next = step(next);
     const nid = newId('t');
-    const body = Object.assign(clone(t), { statut: 'a_faire', faitLe: null, echeance: next, aConfirmer: false, debut: isDate(t.debut) ? addDays(t.debut, diff(base, next)) : null, creeLe: S.today });
+    const body = Object.assign(clone(t), { statut: 'a_faire', faitLe: null, echeance: next, aConfirmer: false, debut: isDate(t.debut) ? addDays(t.debut, diff(base, next)) : null, creeLe: S.today, planifieMs: Date.now() });
     delete body.suivanteId; delete body.id;
     await put('taches', nid, body);
     await patch('taches', id, { suivanteId: nid });
@@ -90,8 +132,9 @@ export async function toggleTask(id) {
 export async function reprogrammer(id, date) {
   const t = get('taches', id); if (!t || !isDate(date)) return;
   const p = parentOf(t);
-  if (t.parentId && typeof t.offset === 'number' && p && !p.aConfirmer && isDate(p.echeance)) await patch('taches', id, { offset: diff(p.echeance, date) });
-  else await patch('taches', id, { echeance: date, aConfirmer: false });
+  const planifieMs = Date.now();
+  if (t.parentId && typeof t.offset === 'number' && p && !p.aConfirmer && isDate(p.echeance)) await patch('taches', id, { offset: diff(p.echeance, date), planifieMs });
+  else await patch('taches', id, { echeance: date, aConfirmer: false, planifieMs });
   toast(date === addDays(S.today, 1) ? 'Reportée à demain' : 'Reprogrammée au ' + fShort(date));
 }
 action('resched-pick', a => { try { if (a.showPicker) a.showPicker(); } catch (e) { } });
@@ -111,9 +154,9 @@ function etapesDe(m) { return (m && Array.isArray(m.etapes) ? m.etapes : []).map
 /* Création depuis une autre vue (tri d'une note, saisie rapide) */
 export async function createTask(fields) {
   const id = newId('t');
-  const modele = fields._modele ? get('modeles', fields._modele) : null;
-  await put('taches', id, Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today }, fields));
-  for (const e of etapesDe(modele)) await put('taches', newId('t'), Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today, titre: e.titre, domaine: fields.domaine || '', parentId: id, offset: e.offset }));
+  const modele = fields._modele ? get('modeles', fields._modele) : null, planifieMs = Date.now();
+  await put('taches', id, Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today, planifieMs }, fields));
+  for (const e of etapesDe(modele)) await put('taches', newId('t'), Object.assign(clone(TACHE_DEFAUT), { creeLe: S.today, planifieMs, titre: e.titre, domaine: fields.domaine || '', parentId: id, offset: e.offset }));
   return id;
 }
 
@@ -238,13 +281,21 @@ async function saveTask(sh) {
   };
   if (old && old.suivanteId) body.suivanteId = old.suivanteId;
   if (old && old.source) body.source = old.source;
+  /* Nouvelle date (ou nouvelle tâche) : elle passe en tête des tâches du même jour */
+  const now = Date.now();
+  if (!old || dueOf(Object.assign({ id }, body)) !== dueOf(old)) body.planifieMs = now;
+  else if (old.planifieMs) body.planifieMs = old.planifieMs;
   await put('taches', id, body);
   if (!isStep) {
     for (const s of sh.steps) {
       if (s._del) { if (s.id) await remove('taches', s.id); continue; }
       const sb = { titre: String(s.titre || '').trim() || 'Étape', statut: s.statut || 'a_faire', domaine: body.domaine, offset: (typeof s.offset === 'number') ? s.offset : null, echeance: isDate(s.echeance) ? s.echeance : null, faitLe: s.statut === 'fait' ? (s.faitLe || S.today) : null };
-      if (s.id) { const prev = get('taches', s.id); if (!prev) continue; if (['titre', 'statut', 'domaine', 'offset', 'echeance', 'faitLe'].some(k => (prev[k] ?? null) !== (sb[k] ?? null))) await patch('taches', s.id, sb); }
-      else await put('taches', newId('t'), Object.assign(clone(TACHE_DEFAUT), sb, { parentId: id, creeLe: S.today }));
+      if (s.id) {
+        const prev = get('taches', s.id); if (!prev) continue;
+        if (['offset', 'echeance'].some(k => (prev[k] ?? null) !== (sb[k] ?? null))) sb.planifieMs = now;
+        if (['titre', 'statut', 'domaine', 'offset', 'echeance', 'faitLe'].some(k => (prev[k] ?? null) !== (sb[k] ?? null))) await patch('taches', s.id, sb);
+      }
+      else await put('taches', newId('t'), Object.assign(clone(TACHE_DEFAUT), sb, { parentId: id, creeLe: S.today, planifieMs: now }));
     }
   }
   S.ui.lastDom = body.domaine; saveUI();

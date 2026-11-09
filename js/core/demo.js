@@ -21,16 +21,18 @@ function donnees() {
   [['univ', 'Université', 'prune', 1], ['candid', 'Candidatures', 'orange', 2], ['franckscom', 'Franckscom', 'lagon', 3], ['linkedin', 'LinkedIn perso', 'encre', 4], ['asso', 'Association', 'sapin', 5], ['admin', 'Admin', 'ardoise', 6], ['perso', 'Perso', 'ocre', 7]]
     .forEach(([id, nom, couleur, ordre]) => add('domaines', id, { nom, couleur, ordre, archive: false }));
 
-  /* Tâches */
-  const T = (id, o) => add('taches', id, Object.assign({}, T0, { creeLe: D(-10) }, o));
+  /* Tâches (planifieMs croissant : la dernière définie est la dernière programmée) */
+  let nT = 0; const now = Date.now();
+  const T = (id, o) => add('taches', id, Object.assign({}, T0, { creeLe: D(-10), planifieMs: now - (200 - (++nT)) * 3600000 }, o));
   T('d-rapport', { titre: 'Rapport de stage : relire l’introduction', domaine: 'univ', echeance: t, priorite: 'haute' });
   T('d-relance', { titre: 'Relancer la galerie Lumen (candidature)', domaine: 'candid', echeance: D(-1) });
   T('d-audit', { titre: 'Audit offert : préparer la grille pour la cave Valmont', domaine: 'franckscom', echeance: t, statut: 'en_cours' });
-  T('d-facture', { titre: 'Envoyer l’attestation à la mutuelle', domaine: 'admin', echeance: D(-2), notes: 'Formulaire en ligne, rubrique « Mes démarches ».' });
+  T('d-facture', { titre: 'Envoyer l’attestation à la mutuelle', domaine: 'admin', echeance: D(-2), priorite: 'basse', notes: 'Formulaire en ligne, rubrique « Mes démarches ».' });
   T('d-courses', { titre: 'Faire le ménage', domaine: 'perso', echeance: D(2), recurrence: 'hebdo', notes: 'De préférence le matin.' });
   T('d-kpi', { titre: 'Relevé mensuel des statistiques de la page', domaine: 'asso', echeance: D(5), recurrence: 'mensuel' });
   T('d-demain', { titre: 'Appeler la cave Valmont pour fixer le rendez-vous', domaine: 'franckscom', echeance: D(1) });
   T('d-demain2', { titre: 'Imprimer le dossier de candidature', domaine: 'candid', echeance: D(1) });
+  T('d-demain3', { titre: 'Confirmer la salle du forum', domaine: 'asso', echeance: D(1), priorite: 'haute' });
   T('d-site', { titre: 'Landing page : rédiger la section « Méthode »', domaine: 'franckscom', echeance: D(3) });
   T('d-mentions', { titre: 'Landing page : mentions légales', domaine: 'franckscom', aConfirmer: true });
   T('d-substack', { titre: 'Article Substack n° 2', domaine: 'franckscom', echeance: D(9), notes: 'Un article toutes les deux semaines, le même jour.' });
