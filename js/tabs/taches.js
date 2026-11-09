@@ -93,7 +93,13 @@ export function taskRow(t, o) {
   if (kids.length) meta.push(`<span class="mini">${kids.filter(k => k.statut === 'fait').length}/${kids.length} étapes</span>`);
   if (t.recurrence && t.recurrence !== 'aucune') meta.push(`<span class="mini">↻ ${t.recurrence === 'hebdo' ? 'chaque semaine' : 'chaque mois'}</span>`);
   if (t.notes) meta.push(`<span class="mini">${textLinks(t.notes).length ? 'notes et liens' : 'notes'}</span>`);
-  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}"><button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button><button type="button" class="row-main" data-action="edit" data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button><span class="row-end">${done ? '' : `<label class="resched" title="Reprogrammer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg><input type="date" class="resched-in" data-action="resched-pick" data-change="resched" data-id="${esc(t.id)}" value="${esc(due || '')}" aria-label="Reprogrammer : ${esc(t.titre)}"></label>`}</span></div>`;
+  /* o.sel : mode sélection de l'onglet Tâches (une tâche faite ne se reprogramme pas) */
+  const selMode = !!o.sel, picked = selMode && !done && SEL.ids.has(t.id);
+  const lead = selMode
+    ? `<button type="button" class="check selbox" data-action="tk-sel" data-id="${esc(t.id)}" aria-pressed="${picked}" aria-label="Sélectionner : ${esc(t.titre)}"${done ? ' disabled' : ''}></button>`
+    : `<button type="button" class="check" data-action="toggle" data-id="${esc(t.id)}" aria-pressed="${done}" aria-label="${done ? 'Rouvrir' : 'Marquer comme fait'} : ${esc(t.titre)}"></button>`;
+  const mainAct = selMode ? (done ? '' : ' data-action="tk-sel"') : ' data-action="edit"';
+  return `<div class="row${late ? ' is-late' : ''}${done ? ' is-done' : ''}${picked ? ' is-sel' : ''}">${lead}<button type="button" class="row-main${selMode && done ? ' static' : ''}"${mainAct} data-id="${esc(t.id)}"><span class="row-title">${t.jalon ? '<span class="jal" aria-label="Jalon">◆</span> ' : ''}${esc(t.titre)}</span>${meta.length ? `<span class="row-meta">${meta.join('')}</span>` : ''}</button><span class="row-end">${(done || selMode) ? '' : `<label class="resched" title="Reprogrammer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg><input type="date" class="resched-in" data-action="resched-pick" data-change="resched" data-id="${esc(t.id)}" value="${esc(due || '')}" aria-label="Reprogrammer : ${esc(t.titre)}"></label>`}</span></div>`;
 }
 export function fillDomSelect(sel) {
   if (!sel) return;
@@ -137,6 +143,56 @@ export async function reprogrammer(id, date) {
   else await patch('taches', id, { echeance: date, aConfirmer: false, planifieMs });
   toast(date === addDays(S.today, 1) ? 'Reportée à demain' : 'Reprogrammée au ' + fShort(date));
 }
+/* ---- Sélection multiple : une nouvelle date pour plusieurs tâches ---- */
+const SEL = { on: false, ids: new Set(), date: '' };
+function selQuit() { SEL.on = false; SEL.ids.clear(); SEL.date = ''; document.documentElement.classList.remove('tk-selecting'); }
+/* Reprogrammer plusieurs tâches au même jour.
+   Tâches principales et étapes à date fixe d'abord ; puis les étapes calées sur leur tâche principale (leur écart change).
+   Une étape calée dont la tâche principale n'a pas d'échéance ne peut pas être datée : elle est comptée à part. */
+export async function reprogrammerLot(ids, date) {
+  if (!isDate(date)) return { n: 0, sans: 0 };
+  const L = ids.map(id => get('taches', id)).filter(t => t && t.statut !== 'fait');
+  const pris = new Set(L.map(t => t.id)), planifieMs = Date.now();
+  const calee = t => !!t.parentId && typeof t.offset === 'number';
+  let n = 0, sans = 0;
+  for (const t of L.filter(t => !calee(t))) { await patch('taches', t.id, { echeance: date, aConfirmer: false, planifieMs }); n++; }
+  for (const t of L.filter(calee)) {
+    const p = parentOf(t), pd = p ? (pris.has(p.id) ? date : dueOf(p)) : null;
+    if (!pd) { sans++; continue; }
+    await patch('taches', t.id, { offset: diff(pd, date), planifieMs }); n++;
+  }
+  return { n, sans };
+}
+function selVisibles() { return Array.from(document.querySelectorAll('#v-tasks .selbox:not([disabled])')).map(b => b.dataset.id); }
+function renderSelBar() {
+  const bar = $('#tk-selbar');
+  document.documentElement.classList.toggle('tk-selecting', !!(bar && SEL.on));
+  if (!bar) return;
+  if (!SEL.on) { bar.hidden = true; bar.innerHTML = ''; return; }
+  const n = SEL.ids.size, vis = selVisibles(), tout = vis.length && vis.every(id => SEL.ids.has(id));
+  bar.hidden = false;
+  bar.innerHTML = `<div class="selbar-l"><span class="selbar-n">${n ? n + ' tâche' + (n > 1 ? 's' : '') : 'Touche des tâches'}</span>${vis.length ? `<button type="button" class="linkbtn" data-action="tk-sel-all">${tout ? 'Aucune' : 'Toutes'}</button>` : ''}</div>`
+    + `<div class="selbar-r"><label class="selbar-d"><input type="date" id="tk-sel-date" value="${esc(SEL.date)}" aria-label="Nouvelle date"></label>`
+    + `<button type="button" class="btn btn-sm" data-action="tk-sel-demain"${n ? '' : ' disabled'}>Demain</button>`
+    + `<button type="button" class="btn btn-sm btn-primary" id="tk-sel-go" data-action="tk-sel-go"${n && isDate(SEL.date) ? '' : ' disabled'}>Appliquer</button></div>`;
+}
+async function selAppliquer(date) {
+  if (!SEL.ids.size || !isDate(date)) return;
+  let r = { n: 0, sans: 0 };
+  if (!await guarded(async () => { r = await reprogrammerLot(Array.from(SEL.ids), date); })) return;
+  selQuit(); refresh();
+  const quand = date === addDays(S.today, 1) ? 'à demain' : 'au ' + fShort(date);
+  let msg = r.n === 1 ? `1 tâche reportée ${quand}` : `${r.n} tâches reportées ${quand}`;
+  if (r.sans) msg += ` · ${r.sans} étape${r.sans > 1 ? 's' : ''} sans date (fixe d’abord l’échéance de la tâche principale)`;
+  toast(msg);
+}
+action('tk-sel-mode', () => { if (SEL.on) selQuit(); else SEL.on = true; refresh(); });
+action('tk-sel', a => { const id = a.dataset.id; if (!id) return; if (SEL.ids.has(id)) SEL.ids.delete(id); else SEL.ids.add(id); renderTasks(); });
+action('tk-sel-all', () => { const vis = selVisibles(); if (vis.every(id => SEL.ids.has(id))) vis.forEach(id => SEL.ids.delete(id)); else vis.forEach(id => SEL.ids.add(id)); renderTasks(); });
+action('tk-sel-demain', () => selAppliquer(addDays(S.today, 1)));
+action('tk-sel-go', () => selAppliquer(SEL.date));
+onInput('tk-sel-date', el => { SEL.date = el.value || ''; const b = $('#tk-sel-go'); if (b) b.disabled = !(SEL.ids.size && isDate(SEL.date)); });
+onChange('tk-sel-date', el => { SEL.date = el.value || ''; const b = $('#tk-sel-go'); if (b) b.disabled = !(SEL.ids.size && isDate(SEL.date)); });
 action('resched-pick', a => { try { if (a.showPicker) a.showPicker(); } catch (e) { } });
 onChange('@resched', el => { if (el.value) guarded(() => reprogrammer(el.dataset.id, el.value)); });
 /* ---- Modèles : suggestion selon le domaine ---- */
@@ -174,6 +230,9 @@ function renderTasks() {
   const groups = domList(true).map(d => ({ d, tops: all.filter(t => isTop(t) && t.domaine === d.id) }));
   const orph = all.filter(t => isTop(t) && !S.data.domaines.has(t.domaine)); if (orph.length) groups.push({ d: dom(''), tops: orph });
   const filtering = !!q || F !== 'actives';
+  for (const id of Array.from(SEL.ids)) { const t = get('taches', id); if (!t || t.statut === 'fait') SEL.ids.delete(id); }
+  const mb = $('#tk-sel-mode'); if (mb) { mb.setAttribute('aria-pressed', String(SEL.on)); mb.textContent = SEL.on ? 'Terminer' : 'Sélectionner'; }
+  const sm = SEL.on;
   let h = '';
   for (const g of groups) {
     const d = g.d, blocks = []; let n = 0;
@@ -183,8 +242,8 @@ function renderTasks() {
       const self = okS(t) && okQ(t);
       if (!self && !kids.length) continue;
       n += 1 + kids.length;
-      blocks.push(taskRow(t, { noDom: true }));
-      if (kids.length) blocks.push(`<div class="kids">${kids.map(k => taskRow(k, { noDom: true, noParent: true })).join('')}</div>`);
+      blocks.push(taskRow(t, { noDom: true, sel: sm }));
+      if (kids.length) blocks.push(`<div class="kids">${kids.map(k => taskRow(k, { noDom: true, noParent: true, sel: sm })).join('')}</div>`);
     }
     if (!blocks.length && (filtering || d.archive)) continue;
     const key = 'dom:' + (d.id || 'aucun');
@@ -193,12 +252,15 @@ function renderTasks() {
   }
   if (!h) h = filtering ? empty('Aucune tâche ne correspond.', 'Change de filtre ou efface la recherche.') : empty('Aucun domaine pour l’instant.', 'Crée-en un dans les Réglages pour ranger tes tâches.');
   el.innerHTML = h;
+  el.classList.toggle('selecting', sm);
+  renderSelBar();
 }
 view('taches', {
   label: 'Tâches', masquable: true,
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.8 6.6l1.3 1.3 2.5-2.7M3.8 12.1l1.3 1.3 2.5-2.7M3.8 17.6l1.3 1.3 2.5-2.7"/></svg>',
   shell: () => `<div class="v-head v-head-row"><div><h1><span class="hl">Tâches</span></h1><p class="v-sub" id="tk-sub"></p></div><button type="button" class="btn btn-primary" data-action="new-task">+ Nouvelle tâche</button></div>
-    <div class="tk-tools"><input id="tk-search" type="search" placeholder="Rechercher une tâche…" aria-label="Rechercher une tâche" value="${esc(S.q)}"><div class="seg" id="tk-filtres" role="group" aria-label="Filtrer"></div></div><div id="v-tasks"></div>`,
+    <div class="tk-tools"><input id="tk-search" type="search" placeholder="Rechercher une tâche…" aria-label="Rechercher une tâche" value="${esc(S.q)}"><div class="seg" id="tk-filtres" role="group" aria-label="Filtrer"></div><button type="button" class="btn btn-sm" id="tk-sel-mode" data-action="tk-sel-mode" aria-pressed="false">Sélectionner</button></div><div id="v-tasks"></div><div class="selbar" id="tk-selbar" role="region" aria-label="Tâches sélectionnées" hidden></div>`,
+  onMount: selQuit,
   render: renderTasks
 });
 onInput('tk-search', el => { S.q = el.value; renderTasks(); });
