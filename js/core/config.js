@@ -14,7 +14,9 @@ export const color = k => 'var(--d-' + (PALETTE.includes(k) ? k : 'ardoise') + '
 /* Tâches */
 export const STATUTS = [['a_faire', 'À faire'], ['en_cours', 'En cours'], ['attente', 'En attente'], ['fait', 'Fait']];
 export const PRIORITES = [['haute', 'Haute'], ['normale', 'Normale'], ['basse', 'Basse']];
-export const RECURRENCES = [['aucune', 'Aucune'], ['hebdo', 'Chaque semaine'], ['mensuel', 'Chaque mois']];
+export const RECURRENCES = [['aucune', 'Aucune'], ['jour', 'Chaque jour, du lundi au dimanche'], ['ouvres', 'Chaque jour, du lundi au vendredi'], ['hebdo', 'Chaque semaine'], ['mensuel', 'Chaque mois']];
+/* Libellé court sur les lignes de tâche */
+export const RECURRENCE_COURT = { jour: 'chaque jour', ouvres: 'du lundi au vendredi', hebdo: 'chaque semaine', mensuel: 'chaque mois' };
 export const TACHE_DEFAUT = { statut: 'a_faire', priorite: 'normale', echeance: null, debut: null, aConfirmer: false, jalon: false, recurrence: 'aucune', notes: '', parentId: null, offset: null, faitLe: null };
 export const DOMAINE_CANDID = 'candid';
 

@@ -1,8 +1,8 @@
 /* Tâches : données, liste par domaine, éditeur avec rétroplanning, modèles de rétroplanning. */
 import { S, list, get, put, patch, remove, saveUI, guarded } from '../core/store.js';
 import { $, esc, clone, opts, newId, toast, ICON, linksHTML, textLinks } from '../core/util.js';
-import { isDate, addDays, addMonths, diff, fShort } from '../core/dates.js';
-import { STATUTS, PRIORITES, RECURRENCES, TACHE_DEFAUT, color } from '../core/config.js';
+import { isDate, addDays, addMonths, diff, fShort, parseD } from '../core/dates.js';
+import { STATUTS, PRIORITES, RECURRENCES, RECURRENCE_COURT, TACHE_DEFAUT, color } from '../core/config.js';
 import { view, action, onInput, sheet, openSheet, renderSheet, ui, head, foot, gate, empty, liens, refresh, onChange, chipsMulti } from '../core/ui.js';
 
 /* ---- Données ---- */
@@ -91,7 +91,7 @@ export function taskRow(t, o) {
   if (t.statut === 'attente') meta.push('<span class="st st-att">en attente</span>');
   const db = o.noDue ? '' : dueBits(t); if (db) meta.push(`<span class="due">${db}</span>`);
   if (kids.length) meta.push(`<span class="mini">${kids.filter(k => k.statut === 'fait').length}/${kids.length} étapes</span>`);
-  if (t.recurrence && t.recurrence !== 'aucune') meta.push(`<span class="mini">↻ ${t.recurrence === 'hebdo' ? 'chaque semaine' : 'chaque mois'}</span>`);
+  if (t.recurrence && t.recurrence !== 'aucune') meta.push(`<span class="mini">↻ ${RECURRENCE_COURT[t.recurrence] || 'récurrente'}</span>`);
   if (t.notes) meta.push(`<span class="mini">${textLinks(t.notes).length ? 'notes et liens' : 'notes'}</span>`);
   /* o.sel : mode sélection de l'onglet Tâches (une tâche faite ne se reprogramme pas) */
   const selMode = !!o.sel, picked = selMode && !done && SEL.ids.has(t.id);
@@ -122,7 +122,7 @@ export async function toggleTask(id) {
   await patch('taches', id, { statut: done ? 'fait' : 'a_faire', faitLe: done ? S.today : null });
   if (done && t.recurrence && t.recurrence !== 'aucune' && isTop(t) && !(t.suivanteId && S.data.taches.has(t.suivanteId))) {
     const base = dueOf(t) || S.today;
-    const step = d => t.recurrence === 'hebdo' ? addDays(d, 7) : addMonths(d, 1);
+    const step = d => prochaineFois(t.recurrence, d);
     let next = step(base); let guard = 0; while (next <= S.today && guard++ < 500) next = step(next);
     const nid = newId('t');
     const body = Object.assign(clone(t), { statut: 'a_faire', faitLe: null, echeance: next, aConfirmer: false, debut: isDate(t.debut) ? addDays(t.debut, diff(base, next)) : null, creeLe: S.today, planifieMs: Date.now() });
@@ -133,6 +133,13 @@ export async function toggleTask(id) {
     return;
   }
   toast(done ? 'Fait' : 'Rouverte');
+}
+/* Occurrence suivante d'une tâche récurrente. « ouvres » : du lundi au vendredi, le week-end est sauté. */
+export function prochaineFois(rec, d) {
+  if (rec === 'jour') return addDays(d, 1);
+  if (rec === 'ouvres') { let n = addDays(d, 1); while ([0, 6].includes(parseD(n).getDay())) n = addDays(n, 1); return n; }
+  if (rec === 'hebdo') return addDays(d, 7);
+  return addMonths(d, 1);
 }
 /* Reprogrammer une tâche à une date (pour une étape calée sur son projet, on décale son écart) */
 export async function reprogrammer(id, date) {
